@@ -19,6 +19,19 @@ import (
 	smath "github.com/ava-labs/avalanchego/utils/math"
 )
 
+func innerGetValue(
+	v []byte,
+	err error,
+) ([]byte, bool, error) {
+	if errors.Is(err, database.ErrNotFound) {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, err
+	}
+	return v, true, nil
+}
+
 type ReadState func(context.Context, [][]byte) ([][]byte, []error)
 
 // State
@@ -162,4 +175,247 @@ func SubBalance(
 		return 0, mu.Remove(ctx, key)
 	}
 	return nbal, setBalance(ctx, mu, key, nbal)
+}
+
+const feedIDPrefix byte = metadata.DefaultMinimumPrefix + 1
+const feedIDChunks uint16 = 1
+
+// [feedIDPrefix]
+func FeedIDKey() (k []byte) {
+	k = make([]byte, 1+consts.Uint16Len)
+	k[0] = feedIDPrefix
+	binary.BigEndian.PutUint16(k[1+codec.AddressLen:], feedIDChunks)
+	return
+}
+
+// If locked is 0, then account does not exist
+func GetHighestFeedID(
+	ctx context.Context,
+	im state.Immutable,
+) (uint64, error) {
+	_, bal, _, err := getHighestFeedID(ctx, im)
+	return bal, err
+}
+
+func getHighestFeedID(
+	ctx context.Context,
+	im state.Immutable,
+) ([]byte, uint64, bool, error) {
+	k := FeedIDKey()
+	feedID, exists, err := innerGetHighestFeedID(im.GetValue(ctx, k))
+	return k, feedID, exists, err
+}
+
+// Used to serve RPC queries
+func GetHighestFeedIDFromState(
+	ctx context.Context,
+	f ReadState,
+	addr codec.Address,
+) (uint64, error) {
+	k := FeedIDKey()
+	values, errs := f(ctx, [][]byte{k})
+	bal, _, err := innerGetHighestFeedID(values[0], errs[0])
+	return bal, err
+}
+
+func innerGetHighestFeedID(
+	v []byte,
+	err error,
+) (uint64, bool, error) {
+	if errors.Is(err, database.ErrNotFound) {
+		return 0, false, nil
+	}
+	if err != nil {
+		return 0, false, err
+	}
+	val, err := database.ParseUInt64(v)
+	if err != nil {
+		return 0, false, err
+	}
+	return val, true, nil
+}
+
+func IncrementFeedID(
+	ctx context.Context,
+	mu state.Mutable,
+) error {
+	k := FeedIDKey()
+	_, prev, exists, err := getHighestFeedID(ctx, mu)
+	if err != nil || !exists {
+		return fmt.Errorf("either not exists: %t or err: %w", exists, err)
+	}
+	return setHighestFeedID(ctx, mu, k, prev+1)
+}
+
+func setHighestFeedID(
+	ctx context.Context,
+	mu state.Mutable,
+	key []byte,
+	feedID uint64,
+) error {
+	return mu.Insert(ctx, key, binary.BigEndian.AppendUint64(nil, feedID))
+}
+
+const feedPrefix byte = metadata.DefaultMinimumPrefix + 2
+const FeedChunks uint16 = 1
+
+// [feedPrefix] + [feedID]
+func FeedKey(feedID uint64) (k []byte) {
+	k = make([]byte, 1+consts.Uint64Len+consts.Uint16Len)
+	k[0] = feedPrefix
+	binary.BigEndian.PutUint64(k[1:], feedID)
+	binary.BigEndian.PutUint16(k[1+consts.Uint64Len:], FeedChunks)
+	return
+}
+
+// GetFeed retrieves the feed value indexed by the feedID.
+func GetFeed(
+	ctx context.Context,
+	im state.Immutable,
+	feedID uint64,
+) ([]byte, error) {
+	k := FeedKey(feedID)
+	return innerGetFeed(im.GetValue(ctx, k))
+}
+
+// GetFeedFromState retrieves the feed value from ReadState, used for RPC queries.
+func GetFeedFromState(
+	ctx context.Context,
+	f ReadState,
+	feedID uint64,
+) ([]byte, error) {
+	k := FeedKey(feedID)
+	values, errs := f(ctx, [][]byte{k})
+	return innerGetFeed(values[0], errs[0])
+}
+
+func innerGetFeed(
+	v []byte,
+	err error,
+) ([]byte, error) {
+	if errors.Is(err, database.ErrNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return v, nil
+}
+
+// SetFeed sets the feed value for a given feedID.
+func SetFeed(
+	ctx context.Context,
+	mu state.Mutable,
+	feedID uint64,
+	value []byte,
+) error {
+	k := FeedKey(feedID)
+	return setFeed(ctx, mu, k, value)
+}
+
+func setFeed(
+	ctx context.Context,
+	mu state.Mutable,
+	key []byte,
+	value []byte,
+) error {
+	return mu.Insert(ctx, key, value)
+}
+
+// store report indexes
+const reportIndexPrefix byte = metadata.DefaultMinimumPrefix + 3
+const ReportIndexChunks uint16 = 1
+
+// [reportIndexPrefix] + [feedID]
+func ReportIndexKey(feedID uint64) (k []byte) {
+	k = make([]byte, 1+consts.Uint64Len+consts.Uint16Len)
+	k[0] = reportIndexPrefix
+	binary.BigEndian.PutUint64(k[1:], feedID)
+	binary.BigEndian.PutUint16(k[1+consts.Uint64Len:], ReportIndexChunks)
+	return
+}
+
+func GetReportIndex(
+	ctx context.Context,
+	im state.Immutable,
+	feedID uint64,
+) ([]byte, error) {
+	k := ReportIndexKey(feedID)
+	value, exists, err := innerGetValue(im.GetValue(ctx, k))
+	if !exists {
+		return nil, database.ErrNotFound
+	}
+	return value, err
+}
+
+func SetReportIndex(
+	ctx context.Context,
+	mu state.Mutable,
+	feedID uint64,
+	value []byte,
+) error {
+	k := ReportIndexKey(feedID)
+	return mu.Insert(ctx, k, value)
+}
+
+func GetReportIndexFromState(
+	ctx context.Context,
+	f ReadState,
+	feedID uint64,
+) ([]byte, error) {
+	k := ReportIndexKey(feedID)
+	values, errs := f(ctx, [][]byte{k})
+	value, _, err := innerGetValue(values[0], errs[0])
+	return value, err
+}
+
+// store individual reports
+const reportPrefix byte = metadata.DefaultMinimumPrefix + 4
+const ReportChunks uint16 = 1
+
+// [reportPrefix] + [feedID] + [address]
+func ReportKey(feedID uint64, addr codec.Address) (k []byte) {
+	k = make([]byte, 1+consts.Uint64Len+codec.AddressLen+consts.Uint16Len)
+	k[0] = reportPrefix
+	binary.BigEndian.PutUint64(k[1:], feedID)
+	copy(k[1+consts.Uint64Len:], addr[:])
+	binary.BigEndian.PutUint16(k[1+consts.Uint64Len+codec.AddressLen:], ReportChunks)
+	return
+}
+
+func GetReport(
+	ctx context.Context,
+	im state.Immutable,
+	feedID uint64,
+	addr codec.Address,
+) ([]byte, error) {
+	k := ReportKey(feedID, addr)
+	value, exists, err := innerGetValue(im.GetValue(ctx, k))
+	if !exists {
+		return nil, database.ErrNotFound
+	}
+	return value, err
+}
+
+func SetReport(
+	ctx context.Context,
+	mu state.Mutable,
+	feedID uint64,
+	addr codec.Address,
+	value []byte,
+) error {
+	k := ReportKey(feedID, addr)
+	return mu.Insert(ctx, k, value)
+}
+
+func GetReportFromState(
+	ctx context.Context,
+	f ReadState,
+	feedID uint64,
+	addr codec.Address,
+) ([]byte, error) {
+	k := ReportKey(feedID, addr)
+	values, errs := f(ctx, [][]byte{k})
+	value, _, err := innerGetValue(values[0], errs[0])
+	return value, err
 }
