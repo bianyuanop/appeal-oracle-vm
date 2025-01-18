@@ -261,3 +261,4 @@ hypersdk-cli balance --sender 0x000000000000000000000000000000000000000000000000
 ```
 
 Read more at [github.com/ava-labs/hypersdk/tree/main/cmd/hypersdk-cli](https://github.com/ava-labs/hypersdk/tree/main/cmd/hypersdk-cli)
+# appeal-oracle-vm
