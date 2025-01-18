@@ -7,4 +7,6 @@ const (
 	// Action TypeIDs
 	TransferID     uint8 = 0
 	RegisterFeedID uint8 = 1
+	ReportFeedID   uint8 = 2
+	BribeID        uint8 = 3
 )

@@ -27,13 +27,16 @@ var (
 
 // A fee need to be paid for the feed registration
 type RegisterFeed struct {
-	FeedID         uint64 `serialize:"true" json:"feedID"`
-	FeedName       string `serialize:"true" json:"feedName"`
-	MinDeposit     uint64 `serialize:"true" json:"minDeposit"`
-	AppealEffect   uint64 `serialize:"true" json:"appealEffect"`
-	AppealMaxDelay uint64 `serialize:"true" json:"appealMaxDelay"`
-	// the WASM for feed reports aggregation, this program can tell us the ones locate in 75% quantiles or within 3 sigma and out of that
-	AggretatorWASM []byte `serialize:"true" json:"aggregatorWASM"`
+	FeedID     uint64 `serialize:"true" json:"feedID"`
+	FeedName   string `serialize:"true" json:"feedName"`
+	MinDeposit uint64 `serialize:"true" json:"minDeposit"`
+	// num of miliseconds one appeal can delay the finalization
+	AppealEffect int64 `serialize:"true" json:"appealEffect"`
+	// max delay appeals can result
+	AppealMaxDelay int64 `serialize:"true" json:"appealMaxDelay"`
+	// finalize interval in mili without any appeals
+	FinalizeInterval int64  `serialize:"true" json:"finalizeInterval"`
+	ProgramID        uint64 `serialize:"true" json:"programID"`
 	// Optional message to accompany transaction.
 	Memo []byte `serialize:"true" json:"memo"`
 }
@@ -107,6 +110,38 @@ func (*RegisterFeedResult) GetTypeID() uint8 {
 }
 
 // TODO: to be implemented
-func (*RegisterFeed) Serialize() ([]byte, error) {
+func (rf *RegisterFeed) Serialize() ([]byte, error) {
+	return nil, nil
+}
+
+// TODO: to be implemented
+func UnmarshalFeed(raw []byte) (*RegisterFeed, error) {
+	return nil, nil
+}
+
+// TODO: this is triggered at every feed submission, however, admins/feed creater should submit
+// a finalize feed to finalize this feed result since in this version of hypersdk, we lose controller functionality
+// to customize a event at the end of each block.Accept
+type FeedResult struct {
+	Value       []byte `json:"value"`
+	FinalizedAt int64  `json:"finalizedAt"` // in mili
+	UpdatedAt   int64  `json:"updatedAt"`   // in mili
+	CreatedAt   int64  `json:"createdAt"`   // in mili
+	// TODO: contain appeals in here
+}
+
+func (fr *FeedResult) Marshal() ([]byte, error) {
+	return nil, nil
+}
+
+func UnmarshalFeedResult(raw []byte) (*FeedResult, error) {
+	return nil, nil
+}
+
+func MarshalFeedResults(results []*FeedResult) ([]byte, error) {
+	return nil, nil
+}
+
+func UnmarshalFeedResults(raw []byte) ([]*FeedResult, error) {
 	return nil, nil
 }
