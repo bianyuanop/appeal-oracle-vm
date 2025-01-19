@@ -2,6 +2,7 @@ package actions
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 
 	"github.com/ava-labs/avalanchego/ids"
@@ -64,15 +65,16 @@ func (rf *RegisterFeed) Execute(
 	if err != nil {
 		return nil, err
 	}
-	if len(rf.Memo) > FeedMaxMemoSize {
-		return nil, ErrFeedMemoTooLarge
-	}
 
 	if rf.FeedID != highestFeedID {
 		return nil, ErrRequestedFeedIDNotLatest
 	}
 
-	rfRaw, err := rf.Serialize()
+	if len(rf.Memo) > FeedMaxMemoSize {
+		return nil, ErrFeedMemoTooLarge
+	}
+
+	rfRaw, err := rf.Marshal()
 	if err != nil {
 		return nil, err
 	}
@@ -109,14 +111,17 @@ func (*RegisterFeedResult) GetTypeID() uint8 {
 	return mconsts.RegisterFeedID // Common practice is to use the action ID
 }
 
-// TODO: to be implemented
-func (rf *RegisterFeed) Serialize() ([]byte, error) {
-	return nil, nil
+func (rf *RegisterFeed) Marshal() ([]byte, error) {
+	return json.Marshal(rf)
 }
 
 // TODO: to be implemented
 func UnmarshalFeed(raw []byte) (*RegisterFeed, error) {
-	return nil, nil
+	ret := new(RegisterFeed)
+	if err := json.Unmarshal(raw, ret); err != nil {
+		return nil, err
+	}
+	return ret, nil
 }
 
 // TODO: this is triggered at every feed submission, however, admins/feed creater should submit

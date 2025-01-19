@@ -11,6 +11,7 @@ import (
 
 	"github.com/ava-labs/avalanchego/database"
 
+	mconsts "github.com/ava-labs/hypersdk-starter-kit/consts"
 	"github.com/ava-labs/hypersdk/codec"
 	"github.com/ava-labs/hypersdk/consts"
 	"github.com/ava-labs/hypersdk/state"
@@ -185,7 +186,7 @@ const feedIDChunks uint16 = 1
 func FeedIDKey() (k []byte) {
 	k = make([]byte, 1+consts.Uint16Len)
 	k[0] = feedIDPrefix
-	binary.BigEndian.PutUint16(k[1+codec.AddressLen:], feedIDChunks)
+	binary.BigEndian.PutUint16(k[1:], feedIDChunks)
 	return
 }
 
@@ -242,10 +243,23 @@ func IncrementFeedID(
 ) error {
 	k := FeedIDKey()
 	_, prev, exists, err := getHighestFeedID(ctx, mu)
-	if err != nil || !exists {
-		return fmt.Errorf("either not exists: %t or err: %w", exists, err)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return setHighestFeedID(ctx, mu, k, mconsts.StartingFeedID)
 	}
 	return setHighestFeedID(ctx, mu, k, prev+1)
+}
+
+// SetFeed sets the feed value for a given feedID.
+func SetHighestFeedID(
+	ctx context.Context,
+	mu state.Mutable,
+	feedID uint64,
+) error {
+	k := FeedIDKey()
+	return setHighestFeedID(ctx, mu, k, feedID)
 }
 
 func setHighestFeedID(

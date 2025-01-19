@@ -13,6 +13,10 @@ const (
 	Symbol = "RED"
 )
 
+const (
+	StartingFeedID = 0
+)
+
 var ID ids.ID
 
 func init() {
