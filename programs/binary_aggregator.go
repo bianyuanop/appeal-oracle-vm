@@ -85,13 +85,15 @@ func (agg *BinaryAggregator) CalculateMajority() {
 		count[feed.value]++
 	}
 
-	values := maps.Values(count)
-	slices.Sort(values)
-	n := len(values)
-	if values[n-1] == values[n-2] {
-		// tie
-		agg.tie = true
-		return
+	countValues := maps.Values(count)
+	slices.Sort(countValues)
+	n := len(countValues)
+	if n >= 2 {
+		if countValues[n-1] == countValues[n-2] {
+			// tie
+			agg.tie = true
+			return
+		}
 	}
 
 	biggestFeedVal := agg.feeds[0].value

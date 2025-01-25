@@ -347,8 +347,8 @@ func ReportIndexKey(feedID uint64, timestamp int64) (k []byte) {
 	k = make([]byte, 1+consts.Uint64Len+consts.Int64Len+consts.Uint16Len)
 	k[0] = reportIndexPrefix
 	binary.BigEndian.PutUint64(k[1:], feedID)
-	binary.BigEndian.PutUint64(k[1:+consts.Uint64Len], uint64(timestamp))
-	binary.BigEndian.PutUint16(k[1+2*consts.Uint64Len:], ReportIndexChunks)
+	binary.BigEndian.PutUint64(k[1+consts.Uint64Len:], uint64(timestamp))
+	binary.BigEndian.PutUint16(k[1+consts.Uint64Len+consts.Int64Len:], ReportIndexChunks)
 	return
 }
 
@@ -489,4 +489,54 @@ func GetFeedResultFromState(
 	values, errs := f(ctx, [][]byte{k})
 	value, _, err := innerGetValue(values[0], errs[0])
 	return value, err
+}
+
+// store last feed result timestamp in seconds
+const feedLastResultTimePrefix byte = metadata.DefaultMinimumPrefix + 7
+const FeedLastResultTimeChunks uint16 = 1
+
+// [feedLastResultPrefix] + [feedID]
+func FeedLastResultTimeKey(feedID uint64) (k []byte) {
+	k = make([]byte, 1+consts.Uint64Len+consts.Uint16Len)
+	k[0] = feedLastResultTimePrefix
+	binary.BigEndian.PutUint64(k[1:], feedID)
+	binary.BigEndian.PutUint16(k[1+consts.Uint64Len:], FeedLastResultTimeChunks)
+	return
+}
+
+func GetLastFeedResultTime(
+	ctx context.Context,
+	im state.Immutable,
+	feedID uint64,
+) (int64, error) {
+	k := FeedLastResultTimeKey(feedID)
+	value, exists, err := innerGetValue(im.GetValue(ctx, k))
+	if !exists {
+		return 0, ErrFeedNeverAggregated
+	}
+	timestamp := binary.LittleEndian.Uint64(value)
+	return int64(timestamp), err
+}
+
+func SetLastFeedResultTime(
+	ctx context.Context,
+	mu state.Mutable,
+	feedID uint64,
+	timeInSeconds int64,
+) error {
+	k := FeedLastResultTimeKey(feedID)
+	value := binary.LittleEndian.AppendUint64(nil, uint64(timeInSeconds))
+	return mu.Insert(ctx, k, value)
+}
+
+func GetLastFeedResultTimeFromState(
+	ctx context.Context,
+	f ReadState,
+	feedID uint64,
+) (int64, error) {
+	k := FeedResultKey(feedID)
+	values, errs := f(ctx, [][]byte{k})
+	value, _, err := innerGetValue(values[0], errs[0])
+	timestamp := binary.LittleEndian.Uint64(value)
+	return int64(timestamp), err
 }

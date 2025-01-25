@@ -23,6 +23,11 @@ const (
 )
 
 var (
+	ErrReportFeedGreaterThanHighest = errors.New("reporting feedID is greater than highest")
+	ErrReportIntoOldRound           = errors.New("reporting into old round")
+)
+
+var (
 	_ chain.Action = (*ReportFeed)(nil)
 )
 
@@ -46,6 +51,7 @@ func (rf *ReportFeed) StateKeys(actor codec.Address, _ ids.ID) state.Keys {
 		string(storage.FeedKey(rf.FeedID)):                             state.Read,
 		string(storage.ReportIndexKey(rf.FeedID, submitAtInSeconds)):   state.All,
 		string(storage.ReportKey(rf.FeedID, submitAtInSeconds, actor)): state.All,
+		string(storage.FeedLastResultTimeKey(rf.FeedID)):               state.All,
 	}
 }
 
@@ -62,8 +68,8 @@ func (rf *ReportFeed) Execute(
 		return nil, err
 	}
 
-	if rf.FeedID < highestFeedID {
-		return nil, fmt.Errorf("reporting feedID is greater than highest")
+	if rf.FeedID > highestFeedID {
+		return nil, ErrReportFeedGreaterThanHighest
 	}
 
 	rawFeedInfo, err := storage.GetFeed(ctx, mu, rf.FeedID)
@@ -76,39 +82,80 @@ func (rf *ReportFeed) Execute(
 		return nil, err
 	}
 
+	// timestamp check
+	submitAtInSeconds := rf.SubmitAt / 1e3
+	timestampInSeconds := timestamp / 1e3
+	lastFeedResultTime, err := storage.GetLastFeedResultTime(ctx, mu, rf.FeedID)
+	if err == storage.ErrFeedNeverAggregated {
+		err := storage.SetLastFeedResultTime(ctx, mu, rf.FeedID, timestampInSeconds)
+		if err != nil {
+			return nil, err
+		}
+
+		return &ReportFeedResult{
+			FirstTime: true,
+		}, nil
+	} else if err != nil {
+		return nil, err
+	}
+
+	if submitAtInSeconds <= lastFeedResultTime {
+		return nil, ErrReportIntoOldRound
+	}
+
 	// TODO: a deposit check for the actor
 
-	// TODO: select using program ID
 	agg, err := programs.NewAggregator(feedInfo.ProgramID)
 	if err != nil {
 		return nil, err
 	}
-	submitAtInSeconds := rf.SubmitAt / 1e3
 
-	rawAddresses, err := storage.GetReportIndex(ctx, mu, submitAtInSeconds, rf.FeedID)
+	fmt.Printf("lastFeedResultTime: %d\n", lastFeedResultTime)
+	fmt.Printf("submitAt: %d\n", submitAtInSeconds)
+	fmt.Printf("timestampInSeconds: %d\n", timestampInSeconds)
+	// iterate though all the submit reports in the current round
+	// ranges from [lastFeedResultTime+1, cur]
+	for t := lastFeedResultTime + 1; t <= timestampInSeconds; t++ {
+		// query reporters at time
+		var addrs []codec.Address
+		rawAddresses, err := storage.GetReportIndex(ctx, mu, t, rf.FeedID)
+		if err != nil && err != database.ErrNotFound {
+			return nil, err
+		}
+		if err == nil {
+			addrs, err = utils.DecodeAddresses(rawAddresses)
+			if err != nil {
+				return nil, err
+			}
+		}
+		// append previous submitted reports into aggregator
+		for _, addr := range addrs {
+			rawFeed, err := storage.GetReport(ctx, mu, rf.FeedID, t, addr)
+			if err == database.ErrNotFound {
+				continue
+			} else if err != nil {
+				return nil, err
+			}
+			feed, err := programs.FeedFromRaw(rawFeed, feedInfo.ProgramID)
+			if err != nil {
+				return nil, err
+			}
+
+			if err := agg.InsertFeed(feed); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	// insert current report
+	curFeed, err := programs.FeedFromRaw(rf.Value, feedInfo.ProgramID)
 	if err != nil {
 		return nil, err
 	}
-	addrs, err := utils.DecodeAddresses(rawAddresses)
-	if err != nil {
-		return nil, err
-	}
+	agg.InsertFeed(curFeed)
 
-	for _, addr := range addrs {
-		rawFeed, err := storage.GetReport(ctx, mu, rf.FeedID, submitAtInSeconds, addr)
-		if err != nil {
-			return nil, err
-		}
-		feed, err := programs.FeedFromRaw(rawFeed, feedInfo.ProgramID)
-		if err != nil {
-			return nil, err
-		}
-
-		if err := agg.InsertFeed(feed); err != nil {
-			return nil, err
-		}
-	}
-
+	// TODO: handle tie
+	// calculate the majority
 	agg.CalculateMajority()
 
 	// load the old feedResult
@@ -144,9 +191,10 @@ func (rf *ReportFeed) Execute(
 	} else {
 		// previous one finalized or this is the first one
 		feedResults = append(feedResults, &FeedResult{
-			Value:     majorityValue,
-			UpdatedAt: timestamp,
-			CreatedAt: timestamp,
+			Value:       majorityValue,
+			UpdatedAt:   timestamp,
+			CreatedAt:   timestamp,
+			FinalizedAt: 0,
 		})
 	}
 	// prune old ones
@@ -154,12 +202,40 @@ func (rf *ReportFeed) Execute(
 		feedResults = feedResults[len(feedResults)-MaxHistoryFeedResultsPertain:]
 	}
 
+	// store feed results
 	feedResultsRaw, err = MarshalFeedResults(feedResults)
 	if err != nil {
 		return nil, err
 	}
 
 	if err := storage.SetFeedResult(ctx, mu, rf.FeedID, feedResultsRaw); err != nil {
+		return nil, err
+	}
+
+	// store the new addresses
+	var addrs []codec.Address
+	rawAddresses, err := storage.GetReportIndex(ctx, mu, submitAtInSeconds, rf.FeedID)
+	if err != nil && err != database.ErrNotFound {
+		return nil, err
+	}
+	if err == nil {
+		addrs, err = utils.DecodeAddresses(rawAddresses)
+		if err != nil {
+			return nil, err
+		}
+	}
+	addrs = append(addrs, actor)
+	newRawAddrs, err := utils.EncodeAddresses(addrs)
+	if err != nil {
+		return nil, err
+	}
+	err = storage.SetReportIndex(ctx, mu, submitAtInSeconds, rf.FeedID, newRawAddrs)
+	if err != nil {
+		return nil, err
+	}
+	// store this report
+	err = storage.SetReport(ctx, mu, rf.FeedID, submitAtInSeconds, actor, rf.Value)
+	if err != nil {
 		return nil, err
 	}
 
@@ -183,6 +259,10 @@ var _ codec.Typed = (*ReportFeedResult)(nil)
 type ReportFeedResult struct {
 	FeedID   uint64 `serialize:"true" json:"feedID"`
 	Majority []byte `serialize:"true" json:"majority"`
+
+	// if the feed never has any reports in it before, we will set the last feed result time to be current
+	// and return directly without doing any aggregation job
+	FirstTime bool `serialize:"true" json:"firstTime"`
 }
 
 func (*ReportFeedResult) GetTypeID() uint8 {

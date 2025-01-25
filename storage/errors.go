@@ -6,6 +6,7 @@ package storage
 import "errors"
 
 var (
-	ErrInvalidAddress = errors.New("invalid address")
-	ErrInvalidBalance = errors.New("invalid balance")
+	ErrInvalidAddress      = errors.New("invalid address")
+	ErrInvalidBalance      = errors.New("invalid balance")
+	ErrFeedNeverAggregated = errors.New("given feed never aggregated")
 )
