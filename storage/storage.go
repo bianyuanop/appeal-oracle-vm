@@ -540,3 +540,51 @@ func GetLastFeedResultTimeFromState(
 	timestamp := binary.LittleEndian.Uint64(value)
 	return int64(timestamp), err
 }
+
+// store stake for given feed
+const feedDepositPrefix byte = metadata.DefaultMinimumPrefix + 8
+const FeedDepositChunks uint16 = 1
+
+// [feedDepositPrefix] + [feedID] + [account]
+func FeedDepositKey(feedID uint64, account codec.Address) (k []byte) {
+	k = make([]byte, 1+consts.Uint64Len+codec.AddressLen+consts.Uint16Len)
+	k[0] = feedDepositPrefix
+	binary.BigEndian.PutUint64(k[1:], feedID)
+	copy(k[1+consts.Uint64Len:], account[:])
+	binary.BigEndian.PutUint16(k[1+consts.Uint64Len+codec.AddressLen:], FeedDepositChunks)
+	return
+}
+
+func GetFeedDeposit(
+	ctx context.Context,
+	im state.Immutable,
+	feedID uint64,
+	acct codec.Address,
+) (uint64, error) {
+	k := FeedDepositKey(feedID, acct)
+	value, _, err := innerGetBalance(im.GetValue(ctx, k))
+	return value, err
+}
+
+func SetFeedDeposit(
+	ctx context.Context,
+	mu state.Mutable,
+	feedID uint64,
+	acct codec.Address,
+	amount uint64,
+) error {
+	k := FeedDepositKey(feedID, acct)
+	return setBalance(ctx, mu, k, amount)
+}
+
+func GetFeedDepositFromState(
+	ctx context.Context,
+	f ReadState,
+	feedID uint64,
+	acct codec.Address,
+) (uint64, error) {
+	k := FeedDepositKey(feedID, acct)
+	values, errs := f(ctx, [][]byte{k})
+	deposit, _, err := innerGetBalance(values[0], errs[0])
+	return deposit, err
+}

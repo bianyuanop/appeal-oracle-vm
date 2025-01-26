@@ -14,7 +14,7 @@ import (
 
 func TestRegisterFeed(t *testing.T) {
 	simpleFeed := &RegisterFeed{
-		FeedID:           0,
+		FeedID:           1,
 		FeedName:         "A Soccer Match",
 		MinDeposit:       100000,
 		AppealEffect:     0,
@@ -36,12 +36,12 @@ func TestRegisterFeed(t *testing.T) {
 				return store
 			}(),
 			Assertion: func(ctx context.Context, t *testing.T, m state.Mutable) {
-				simpleFeedStorageRaw, err := storage.GetFeed(ctx, m, uint64(0))
+				simpleFeedStorageRaw, err := storage.GetFeed(ctx, m, uint64(1))
 				require.NoError(t, err)
 				require.Equal(t, simpleFeedRaw, simpleFeedStorageRaw)
 			},
 			ExpectedOutputs: &RegisterFeedResult{
-				FeedID: 0,
+				FeedID: 1,
 			},
 		},
 	}
@@ -53,7 +53,7 @@ func TestRegisterFeed(t *testing.T) {
 
 func TestCantRegisterInconsectiveFeed(t *testing.T) {
 	simpleFeed := &RegisterFeed{
-		FeedID:           1, // the default is 1
+		FeedID:           2, // the default first one is 1
 		FeedName:         "A Soccer Match",
 		MinDeposit:       100000,
 		AppealEffect:     0,

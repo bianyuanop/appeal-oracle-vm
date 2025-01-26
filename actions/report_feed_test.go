@@ -43,7 +43,7 @@ func TestReportIntoExists(t *testing.T) {
 	simpleFeed := &RegisterFeed{
 		FeedID:           0,
 		FeedName:         "A Soccer Match",
-		MinDeposit:       100000,
+		MinDeposit:       0,
 		AppealEffect:     0,
 		AppealMaxDelay:   0,
 		FinalizeInterval: 5000, // 5000 ms
@@ -233,7 +233,7 @@ func TestReportFeedWithManyReports(t *testing.T) {
 	simpleFeed := &RegisterFeed{
 		FeedID:           feedID,
 		FeedName:         "A Soccer Match",
-		MinDeposit:       100000,
+		MinDeposit:       0,
 		AppealEffect:     0,
 		AppealMaxDelay:   0,
 		FinalizeInterval: 5000, // 5000 ms

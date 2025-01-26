@@ -67,7 +67,7 @@ func (rf *RegisterFeed) Execute(
 		return nil, err
 	}
 
-	if rf.FeedID != highestFeedID {
+	if rf.FeedID != highestFeedID+1 {
 		return nil, ErrRequestedFeedIDNotLatest
 	}
 

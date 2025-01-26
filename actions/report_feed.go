@@ -25,6 +25,7 @@ const (
 var (
 	ErrReportFeedGreaterThanHighest = errors.New("reporting feedID is greater than highest")
 	ErrReportIntoOldRound           = errors.New("reporting into old round")
+	ErrReportingWithDepositBelowMin = errors.New("reporting with deposit below minimum")
 )
 
 var (
@@ -49,6 +50,7 @@ func (rf *ReportFeed) StateKeys(actor codec.Address, _ ids.ID) state.Keys {
 
 	return state.Keys{
 		string(storage.FeedKey(rf.FeedID)):                             state.Read,
+		string(storage.FeedDepositKey(rf.FeedID, actor)):               state.Read,
 		string(storage.ReportIndexKey(rf.FeedID, submitAtInSeconds)):   state.All,
 		string(storage.ReportKey(rf.FeedID, submitAtInSeconds, actor)): state.All,
 		string(storage.FeedLastResultTimeKey(rf.FeedID)):               state.All,
@@ -104,6 +106,14 @@ func (rf *ReportFeed) Execute(
 	}
 
 	// TODO: a deposit check for the actor
+	deposit, err := storage.GetFeedDeposit(ctx, mu, rf.FeedID, actor)
+	if err != nil {
+		return nil, err
+	}
+
+	if deposit < feedInfo.MinDeposit {
+		return nil, ErrReportingWithDepositBelowMin
+	}
 
 	agg, err := programs.NewAggregator(feedInfo.ProgramID)
 	if err != nil {
