@@ -7,23 +7,23 @@ import (
 	"golang.org/x/exp/maps"
 )
 
-var _ GeneralFeed = (*BinaryFeed)(nil)
+var _ GeneralReport = (*BinaryReport)(nil)
 
-type BinaryFeed struct {
+type BinaryReport struct {
 	value uint8
 
 	initialized bool
 }
 
-func NewBinaryFeed() *BinaryFeed {
-	return &BinaryFeed{
+func NewBinaryFeed() *BinaryReport {
+	return &BinaryReport{
 		initialized: false,
 	}
 }
 
-func (bf *BinaryFeed) FromRaw(raw []byte) error {
+func (bf *BinaryReport) FromRaw(raw []byte) error {
 	if len(raw) != 1 {
-		return fmt.Errorf("non 1 byte binary feed provided, wanted: 1, actual: %d", len(raw))
+		return fmt.Errorf("non 1 byte binary report provided, wanted: 1, actual: %d", len(raw))
 	}
 
 	bf.value = raw[0]
@@ -31,16 +31,16 @@ func (bf *BinaryFeed) FromRaw(raw []byte) error {
 	return nil
 }
 
-func (bf *BinaryFeed) Value() ([]byte, error) {
+func (bf *BinaryReport) Value() ([]byte, error) {
 	ret := make([]byte, 1)
 	ret[0] = bf.value
 	return ret, nil
 }
 
-func GeneralFeedToBinaryFeed(feed GeneralFeed) (*BinaryFeed, error) {
-	binFeed, ok := feed.(*BinaryFeed)
+func GeneralFeedToBinaryFeed(report GeneralReport) (*BinaryReport, error) {
+	binFeed, ok := report.(*BinaryReport)
 	if !ok {
-		return nil, fmt.Errorf("unable to reflect BinaryFeed")
+		return nil, fmt.Errorf("unable to reflect BinaryReport")
 	}
 	if !binFeed.initialized {
 		return nil, fmt.Errorf("not initialized")
@@ -52,37 +52,37 @@ func GeneralFeedToBinaryFeed(feed GeneralFeed) (*BinaryFeed, error) {
 var _ Aggregator = (*BinaryAggregator)(nil)
 
 type BinaryAggregator struct {
-	feeds    []*BinaryFeed
-	majority *BinaryFeed
+	reports  []*BinaryReport
+	majority *BinaryReport
 	tie      bool
 }
 
 func NewBinaryAggregator() *BinaryAggregator {
 	return &BinaryAggregator{
-		feeds:    make([]*BinaryFeed, 0),
+		reports:  make([]*BinaryReport, 0),
 		majority: nil,
 		tie:      false,
 	}
 }
 
-func (agg *BinaryAggregator) InsertFeed(feed GeneralFeed) error {
-	binFeed, err := GeneralFeedToBinaryFeed(feed)
+func (agg *BinaryAggregator) InsertReport(report GeneralReport) error {
+	binFeed, err := GeneralFeedToBinaryFeed(report)
 	if err != nil {
 		return err
 	}
 
-	agg.feeds = append(agg.feeds, binFeed)
+	agg.reports = append(agg.reports, binFeed)
 	return nil
 }
 
 func (agg *BinaryAggregator) CalculateMajority() {
-	if len(agg.feeds) == 0 {
+	if len(agg.reports) == 0 {
 		return
 	}
 
 	count := make(map[uint8]int)
-	for _, feed := range agg.feeds {
-		count[feed.value]++
+	for _, report := range agg.reports {
+		count[report.value]++
 	}
 
 	countValues := maps.Values(count)
@@ -96,7 +96,7 @@ func (agg *BinaryAggregator) CalculateMajority() {
 		}
 	}
 
-	biggestFeedVal := agg.feeds[0].value
+	biggestFeedVal := agg.reports[0].value
 	biggestFeedCnt := count[biggestFeedVal]
 	for feedVal, cnt := range count {
 		if cnt > biggestFeedCnt {
@@ -105,17 +105,17 @@ func (agg *BinaryAggregator) CalculateMajority() {
 		}
 	}
 
-	agg.majority = &BinaryFeed{
+	agg.majority = &BinaryReport{
 		value: biggestFeedVal,
 	}
 }
 
-func (agg *BinaryAggregator) Majority() GeneralFeed {
+func (agg *BinaryAggregator) Majority() GeneralReport {
 	return agg.majority
 }
 
-func (agg *BinaryAggregator) IsMajority(feed GeneralFeed) (bool, error) {
-	binFeed, err := GeneralFeedToBinaryFeed(feed)
+func (agg *BinaryAggregator) IsMajority(report GeneralReport) (bool, error) {
+	binFeed, err := GeneralFeedToBinaryFeed(report)
 	if err != nil {
 		return false, err
 	}

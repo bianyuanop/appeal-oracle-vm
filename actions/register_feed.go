@@ -10,7 +10,6 @@ import (
 	"github.com/ava-labs/hypersdk-starter-kit/storage"
 	"github.com/ava-labs/hypersdk/chain"
 	"github.com/ava-labs/hypersdk/codec"
-	"github.com/ava-labs/hypersdk/consts"
 	"github.com/ava-labs/hypersdk/state"
 
 	mconsts "github.com/ava-labs/hypersdk-starter-kit/consts"
@@ -123,64 +122,4 @@ func UnmarshalFeed(raw []byte) (*RegisterFeed, error) {
 		return nil, err
 	}
 	return ret, nil
-}
-
-// TODO: this is triggered at every feed submission, however, admins/feed creater should submit
-// a finalize feed to finalize this feed result since in this version of hypersdk, we lose controller functionality
-// to customize a event at the end of each block.Accept
-type FeedResult struct {
-	Value       []byte `json:"value"`
-	FinalizedAt int64  `json:"finalizedAt"` // in mili
-	UpdatedAt   int64  `json:"updatedAt"`   // in mili
-	CreatedAt   int64  `json:"createdAt"`   // in mili
-	// TODO: contain appeals in here
-}
-
-func (fr *FeedResult) Marshal(p *codec.Packer) error {
-	p.PackBytes(fr.Value)
-	p.PackInt64(fr.FinalizedAt)
-	p.PackInt64(fr.UpdatedAt)
-	p.PackInt64(fr.CreatedAt)
-
-	return p.Err()
-}
-
-func UnmarshalFeedResult(p *codec.Packer) (*FeedResult, error) {
-	fr := &FeedResult{}
-
-	p.UnpackBytes(-1, true, &fr.Value)
-	fr.FinalizedAt = p.UnpackInt64(false)
-	fr.UpdatedAt = p.UnpackInt64(false)
-	fr.CreatedAt = p.UnpackInt64(false)
-
-	return fr, p.Err()
-}
-
-func MarshalFeedResults(results []*FeedResult) ([]byte, error) {
-	// TODO: make a const for initial cap
-	p := codec.NewWriter(100, consts.NetworkSizeLimit)
-	p.PackInt(uint32(len(results)))
-	for _, result := range results {
-		err := result.Marshal(p)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return p.Bytes(), p.Err()
-}
-
-func UnmarshalFeedResults(raw []byte) ([]*FeedResult, error) {
-	p := codec.NewReader(raw, consts.NetworkSizeLimit)
-	numResults := p.UnpackInt(false)
-	ret := make([]*FeedResult, 0, numResults)
-	for i := 0; i < int(numResults); i++ {
-		fr, err := UnmarshalFeedResult(p)
-		if err != nil {
-			return nil, err
-		}
-		ret = append(ret, fr)
-	}
-
-	return ret, p.Err()
 }

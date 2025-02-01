@@ -4,12 +4,12 @@ import (
 	"fmt"
 )
 
-type GeneralFeed interface {
+type GeneralReport interface {
 	FromRaw([]byte) error
 	Value() ([]byte, error)
 }
 
-func FeedFromRaw(raw []byte, programID uint64) (GeneralFeed, error) {
+func ReportFromRaw(raw []byte, programID uint64) (GeneralReport, error) {
 	switch programID {
 	case BinaryAggregatorProgramID:
 		feed := NewBinaryFeed()
@@ -24,9 +24,9 @@ func FeedFromRaw(raw []byte, programID uint64) (GeneralFeed, error) {
 
 type Aggregator interface {
 	CalculateMajority()
-	Majority() GeneralFeed
-	InsertFeed(feed GeneralFeed) error
-	IsMajority(feed GeneralFeed) (bool, error)
+	Majority() GeneralReport
+	InsertReport(report GeneralReport) error
+	IsMajority(report GeneralReport) (bool, error)
 	ProgramID() uint64
 }
 

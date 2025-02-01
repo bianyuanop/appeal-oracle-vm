@@ -11,6 +11,7 @@ import (
 
 	"github.com/ava-labs/avalanchego/database"
 
+	"github.com/ava-labs/hypersdk-starter-kit/common"
 	mconsts "github.com/ava-labs/hypersdk-starter-kit/consts"
 	"github.com/ava-labs/hypersdk/codec"
 	"github.com/ava-labs/hypersdk/consts"
@@ -37,7 +38,7 @@ type ReadState func(context.Context, [][]byte) ([][]byte, []error)
 
 // State
 // 0x0/ (hypersdk-height)
-// 0x1/ (hypersdk-timestamp)
+// 0x1/ (hypersdk-round)
 // 0x2/ (hypersdk-fee)
 //
 // 0x3/ (balance)
@@ -339,68 +340,139 @@ func setFeed(
 }
 
 // store report indexes, i.e. an array of raw bytes of codec.Address
-const reportIndexPrefix byte = metadata.DefaultMinimumPrefix + 3
-const ReportIndexChunks uint16 = 20
+const feedRoundPrefix byte = metadata.DefaultMinimumPrefix + 3
+const FeedRoundChunks uint16 = 1
 
-// [reportIndexPrefix] + [feedID] + [timestamp](in seconds)
-func ReportIndexKey(feedID uint64, timestamp int64) (k []byte) {
-	k = make([]byte, 1+consts.Uint64Len+consts.Int64Len+consts.Uint16Len)
-	k[0] = reportIndexPrefix
+// [feedRoundPrefix] + [feedID]
+func FeedRoundKey(feedID uint64) (k []byte) {
+	k = make([]byte, 1+consts.Uint64Len+consts.Uint16Len)
+	k[0] = feedRoundPrefix
 	binary.BigEndian.PutUint64(k[1:], feedID)
-	binary.BigEndian.PutUint64(k[1+consts.Uint64Len:], uint64(timestamp))
-	binary.BigEndian.PutUint16(k[1+consts.Uint64Len+consts.Int64Len:], ReportIndexChunks)
+	binary.BigEndian.PutUint16(k[1+consts.Uint64Len:], FeedRoundChunks)
 	return
 }
 
-func GetReportIndex(
+func GetFeedRound(
 	ctx context.Context,
 	im state.Immutable,
-	timestamp int64,
 	feedID uint64,
-) ([]byte, error) {
-	k := ReportIndexKey(feedID, timestamp)
+) (*common.RoundInfo, error) {
+	k := FeedRoundKey(feedID)
 	value, exists, err := innerGetValue(im.GetValue(ctx, k))
-	if !exists {
-		return nil, database.ErrNotFound
+	if err != nil {
+		return nil, err
+	} else if !exists {
+		return nil, nil
 	}
-	return value, err
+
+	return common.UnmarshalRoundInfo(value)
 }
 
-func SetReportIndex(
+func SetFeedRound(
 	ctx context.Context,
 	mu state.Mutable,
-	timestamp int64,
 	feedID uint64,
-	value []byte,
+	round *common.RoundInfo,
 ) error {
-	k := ReportIndexKey(feedID, timestamp)
+	k := FeedRoundKey(feedID)
+	v, err := round.Marshal()
+	if err != nil {
+		return err
+	}
+	return mu.Insert(ctx, k, v)
+}
+
+func GetFeedRoundFromState(
+	ctx context.Context,
+	f ReadState,
+	feedID uint64,
+) (*common.RoundInfo, error) {
+	k := FeedRoundKey(feedID)
+	values, errs := f(ctx, [][]byte{k})
+	value, exists, err := innerGetValue(values[0], errs[0])
+	if err != nil {
+		return nil, err
+	} else if !exists {
+		return nil, nil
+	}
+	return common.UnmarshalRoundInfo(value)
+}
+
+// store report indexes, i.e. an array of raw bytes of codec.Address
+const reportAddressesIndex byte = metadata.DefaultMinimumPrefix + 4
+const reportAddressesChunks uint16 = 20
+
+// [reportIndexPrefix] + [feedID] + [round]
+func ReportIndexKey(feedID uint64, round uint64) (k []byte) {
+	k = make([]byte, 1+consts.Uint64Len+consts.Uint64Len+consts.Uint16Len)
+	k[0] = reportAddressesIndex
+	binary.BigEndian.PutUint64(k[1:], feedID)
+	binary.BigEndian.PutUint64(k[1+consts.Uint64Len:], round)
+	binary.BigEndian.PutUint16(k[1+consts.Uint64Len+consts.Int64Len:], reportAddressesChunks)
+	return
+}
+
+func GetReportAddresses(
+	ctx context.Context,
+	im state.Immutable,
+	round uint64,
+	feedID uint64,
+) ([]codec.Address, error) {
+	k := ReportIndexKey(feedID, round)
+	value, exists, err := innerGetValue(im.GetValue(ctx, k))
+	if err != nil && err != database.ErrNotFound {
+		return nil, err
+	} else if !exists {
+		return nil, nil
+	}
+	return common.DecodeAddresses(value)
+}
+
+func SetReportAddresses(
+	ctx context.Context,
+	mu state.Mutable,
+	round uint64,
+	feedID uint64,
+	addrs []codec.Address,
+) error {
+	k := ReportIndexKey(feedID, round)
+	value, err := common.EncodeAddresses(addrs)
+	if err != nil {
+		return err
+	}
 	return mu.Insert(ctx, k, value)
 }
 
-func GetReportIndexFromState(
+func GetReportAddressesFromState(
 	ctx context.Context,
 	f ReadState,
-	timestamp int64,
+	round uint64,
 	feedID uint64,
-) ([]byte, error) {
-	k := ReportIndexKey(feedID, timestamp)
+) ([]codec.Address, error) {
+	k := ReportIndexKey(feedID, round)
 	values, errs := f(ctx, [][]byte{k})
-	value, _, err := innerGetValue(values[0], errs[0])
-	return value, err
+	value, exists, err := innerGetValue(values[0], errs[0])
+	if err != nil && err != database.ErrNotFound {
+		return nil, err
+	} else if !exists {
+		return nil, nil
+	}
+
+	return common.DecodeAddresses(value)
 }
 
 // store individual reports
-const reportPrefix byte = metadata.DefaultMinimumPrefix + 4
+const reportPrefix byte = metadata.DefaultMinimumPrefix + 5
 const ReportChunks uint16 = 1
 
-// [reportPrefix] + [feedID] + [address]
-func ReportKey(feedID uint64, timestamp int64, addr codec.Address) (k []byte) {
-	k = make([]byte, 1+consts.Uint64Len+consts.Int64Len+codec.AddressLen+consts.Uint16Len)
+// [reportPrefix] + [feedID] + [round] + [address]
+func ReportKey(feedID uint64, round uint64, addr codec.Address) (k []byte) {
+	k = make([]byte, 1+consts.Uint64Len+consts.Uint64Len+codec.AddressLen+consts.Uint16Len)
 	k[0] = reportPrefix
 	binary.BigEndian.PutUint64(k[1:], feedID)
-	binary.BigEndian.PutUint64(k[1+consts.Uint64Len:], uint64(timestamp))
-	copy(k[1+consts.Uint64Len+consts.Int64Len:], addr[:])
-	binary.BigEndian.PutUint16(k[1+consts.Uint64Len+consts.Int64Len+codec.AddressLen:], ReportChunks)
+	binary.BigEndian.PutUint64(k[1+consts.Uint64Len:], round)
+	copy(k[1+consts.Uint64Len+consts.Uint64Len:], addr[:])
+	binary.BigEndian.PutUint16(k[1+consts.Uint64Len+consts.Uint64Len+codec.AddressLen:], ReportChunks)
 	return
 }
 
@@ -408,10 +480,10 @@ func GetReport(
 	ctx context.Context,
 	im state.Immutable,
 	feedID uint64,
-	timestamp int64,
+	round uint64,
 	addr codec.Address,
 ) ([]byte, error) {
-	k := ReportKey(feedID, timestamp, addr)
+	k := ReportKey(feedID, round, addr)
 	value, exists, err := innerGetValue(im.GetValue(ctx, k))
 	if !exists {
 		return nil, database.ErrNotFound
@@ -423,22 +495,22 @@ func SetReport(
 	ctx context.Context,
 	mu state.Mutable,
 	feedID uint64,
-	timestamp int64,
+	round uint64,
 	addr codec.Address,
 	value []byte,
 ) error {
-	k := ReportKey(feedID, timestamp, addr)
+	k := ReportKey(feedID, round, addr)
 	return mu.Insert(ctx, k, value)
 }
 
 func GetReportFromState(
 	ctx context.Context,
 	f ReadState,
-	timestamp int64,
+	round uint64,
 	feedID uint64,
 	addr codec.Address,
 ) ([]byte, error) {
-	k := ReportKey(feedID, timestamp, addr)
+	k := ReportKey(feedID, round, addr)
 	values, errs := f(ctx, [][]byte{k})
 	value, _, err := innerGetValue(values[0], errs[0])
 	return value, err
@@ -448,12 +520,13 @@ func GetReportFromState(
 const feedResultPrefix byte = metadata.DefaultMinimumPrefix + 6
 const FeedResultChunks uint16 = 1
 
-// [reportPrefix] + [feedID] + [address]
-func FeedResultKey(feedID uint64) (k []byte) {
-	k = make([]byte, 1+consts.Uint64Len+consts.Uint16Len)
+// [feedResultPrefix] + [feedID] + [round]
+func FeedResultKey(feedID uint64, round uint64) (k []byte) {
+	k = make([]byte, 1+consts.Uint64Len+consts.Uint64Len+consts.Uint16Len)
 	k[0] = feedResultPrefix
 	binary.BigEndian.PutUint64(k[1:], feedID)
-	binary.BigEndian.PutUint16(k[1+consts.Uint64Len:], FeedResultChunks)
+	binary.BigEndian.PutUint64(k[1+consts.Uint64Len:], round)
+	binary.BigEndian.PutUint16(k[1+consts.Uint64Len+consts.Uint64Len:], FeedResultChunks)
 	return
 }
 
@@ -461,8 +534,9 @@ func GetFeedResult(
 	ctx context.Context,
 	im state.Immutable,
 	feedID uint64,
+	round uint64,
 ) ([]byte, error) {
-	k := FeedResultKey(feedID)
+	k := FeedResultKey(feedID, round)
 	value, exists, err := innerGetValue(im.GetValue(ctx, k))
 	if !exists {
 		return nil, database.ErrNotFound
@@ -474,9 +548,10 @@ func SetFeedResult(
 	ctx context.Context,
 	mu state.Mutable,
 	feedID uint64,
+	round uint64,
 	value []byte,
 ) error {
-	k := FeedResultKey(feedID)
+	k := FeedResultKey(feedID, round)
 	return mu.Insert(ctx, k, value)
 }
 
@@ -484,65 +559,16 @@ func GetFeedResultFromState(
 	ctx context.Context,
 	f ReadState,
 	feedID uint64,
+	round uint64,
 ) ([]byte, error) {
-	k := FeedResultKey(feedID)
+	k := FeedResultKey(feedID, round)
 	values, errs := f(ctx, [][]byte{k})
 	value, _, err := innerGetValue(values[0], errs[0])
 	return value, err
 }
 
-// store last feed result timestamp in seconds
-const feedLastResultTimePrefix byte = metadata.DefaultMinimumPrefix + 7
-const FeedLastResultTimeChunks uint16 = 1
-
-// [feedLastResultPrefix] + [feedID]
-func FeedLastResultTimeKey(feedID uint64) (k []byte) {
-	k = make([]byte, 1+consts.Uint64Len+consts.Uint16Len)
-	k[0] = feedLastResultTimePrefix
-	binary.BigEndian.PutUint64(k[1:], feedID)
-	binary.BigEndian.PutUint16(k[1+consts.Uint64Len:], FeedLastResultTimeChunks)
-	return
-}
-
-func GetLastFeedResultTime(
-	ctx context.Context,
-	im state.Immutable,
-	feedID uint64,
-) (int64, error) {
-	k := FeedLastResultTimeKey(feedID)
-	value, exists, err := innerGetValue(im.GetValue(ctx, k))
-	if !exists {
-		return 0, ErrFeedNeverAggregated
-	}
-	timestamp := binary.LittleEndian.Uint64(value)
-	return int64(timestamp), err
-}
-
-func SetLastFeedResultTime(
-	ctx context.Context,
-	mu state.Mutable,
-	feedID uint64,
-	timeInSeconds int64,
-) error {
-	k := FeedLastResultTimeKey(feedID)
-	value := binary.LittleEndian.AppendUint64(nil, uint64(timeInSeconds))
-	return mu.Insert(ctx, k, value)
-}
-
-func GetLastFeedResultTimeFromState(
-	ctx context.Context,
-	f ReadState,
-	feedID uint64,
-) (int64, error) {
-	k := FeedResultKey(feedID)
-	values, errs := f(ctx, [][]byte{k})
-	value, _, err := innerGetValue(values[0], errs[0])
-	timestamp := binary.LittleEndian.Uint64(value)
-	return int64(timestamp), err
-}
-
 // store stake for given feed
-const feedDepositPrefix byte = metadata.DefaultMinimumPrefix + 8
+const feedDepositPrefix byte = metadata.DefaultMinimumPrefix + 7
 const FeedDepositChunks uint16 = 1
 
 // [feedDepositPrefix] + [feedID] + [account]
