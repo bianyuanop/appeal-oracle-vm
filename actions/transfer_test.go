@@ -11,11 +11,11 @@ import (
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/stretchr/testify/require"
 
-	"github.com/ava-labs/hypersdk-starter-kit/storage"
 	"github.com/ava-labs/hypersdk/chain/chaintest"
 	"github.com/ava-labs/hypersdk/codec"
 	"github.com/ava-labs/hypersdk/codec/codectest"
 	"github.com/ava-labs/hypersdk/state"
+	"github.com/bianyuanop/oraclevm/storage"
 )
 
 func TestTransferAction(t *testing.T) {

@@ -6,9 +6,6 @@ package vm
 import (
 	"github.com/ava-labs/avalanchego/utils/wrappers"
 
-	"github.com/ava-labs/hypersdk-starter-kit/actions"
-	"github.com/ava-labs/hypersdk-starter-kit/consts"
-	"github.com/ava-labs/hypersdk-starter-kit/storage"
 	"github.com/ava-labs/hypersdk/auth"
 	"github.com/ava-labs/hypersdk/chain"
 	"github.com/ava-labs/hypersdk/codec"
@@ -16,6 +13,9 @@ import (
 	"github.com/ava-labs/hypersdk/state/metadata"
 	"github.com/ava-labs/hypersdk/vm"
 	"github.com/ava-labs/hypersdk/vm/defaultvm"
+	"github.com/bianyuanop/oraclevm/actions"
+	"github.com/bianyuanop/oraclevm/consts"
+	"github.com/bianyuanop/oraclevm/storage"
 )
 
 var (

@@ -5,11 +5,11 @@ import (
 	"errors"
 
 	"github.com/ava-labs/avalanchego/ids"
-	mconsts "github.com/ava-labs/hypersdk-starter-kit/consts"
-	"github.com/ava-labs/hypersdk-starter-kit/storage"
 	"github.com/ava-labs/hypersdk/chain"
 	"github.com/ava-labs/hypersdk/codec"
 	"github.com/ava-labs/hypersdk/state"
+	mconsts "github.com/bianyuanop/oraclevm/consts"
+	"github.com/bianyuanop/oraclevm/storage"
 )
 
 const (

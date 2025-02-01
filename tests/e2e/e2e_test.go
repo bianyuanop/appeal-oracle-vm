@@ -10,15 +10,15 @@ import (
 	"github.com/ava-labs/avalanchego/tests/fixture/e2e"
 	"github.com/stretchr/testify/require"
 
-	_ "github.com/ava-labs/hypersdk-starter-kit/tests" // include the tests that are shared between the integration and e2e
+	_ "github.com/bianyuanop/oraclevm/tests" // include the tests that are shared between the integration and e2e
 
-	"github.com/ava-labs/hypersdk-starter-kit/consts"
-	"github.com/ava-labs/hypersdk-starter-kit/tests/workload"
-	"github.com/ava-labs/hypersdk-starter-kit/throughput"
-	"github.com/ava-labs/hypersdk-starter-kit/vm"
 	"github.com/ava-labs/hypersdk/abi"
 	"github.com/ava-labs/hypersdk/auth"
 	"github.com/ava-labs/hypersdk/tests/fixture"
+	"github.com/bianyuanop/oraclevm/consts"
+	"github.com/bianyuanop/oraclevm/tests/workload"
+	"github.com/bianyuanop/oraclevm/throughput"
+	"github.com/bianyuanop/oraclevm/vm"
 
 	he2e "github.com/ava-labs/hypersdk/tests/e2e"
 	ginkgo "github.com/onsi/ginkgo/v2"

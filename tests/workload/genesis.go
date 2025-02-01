@@ -10,14 +10,14 @@ import (
 
 	"github.com/ava-labs/avalanchego/ids"
 
-	"github.com/ava-labs/hypersdk-starter-kit/consts"
-	"github.com/ava-labs/hypersdk-starter-kit/vm"
 	"github.com/ava-labs/hypersdk/auth"
 	"github.com/ava-labs/hypersdk/codec"
 	"github.com/ava-labs/hypersdk/crypto/ed25519"
 	"github.com/ava-labs/hypersdk/fees"
 	"github.com/ava-labs/hypersdk/genesis"
 	"github.com/ava-labs/hypersdk/tests/workload"
+	"github.com/bianyuanop/oraclevm/consts"
+	"github.com/bianyuanop/oraclevm/vm"
 )
 
 const (

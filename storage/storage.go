@@ -11,12 +11,12 @@ import (
 
 	"github.com/ava-labs/avalanchego/database"
 
-	"github.com/ava-labs/hypersdk-starter-kit/common"
-	mconsts "github.com/ava-labs/hypersdk-starter-kit/consts"
 	"github.com/ava-labs/hypersdk/codec"
 	"github.com/ava-labs/hypersdk/consts"
 	"github.com/ava-labs/hypersdk/state"
 	"github.com/ava-labs/hypersdk/state/metadata"
+	"github.com/bianyuanop/oraclevm/common"
+	mconsts "github.com/bianyuanop/oraclevm/consts"
 
 	smath "github.com/ava-labs/avalanchego/utils/math"
 )

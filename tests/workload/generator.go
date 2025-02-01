@@ -10,9 +10,6 @@ import (
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/stretchr/testify/require"
 
-	"github.com/ava-labs/hypersdk-starter-kit/actions"
-	"github.com/ava-labs/hypersdk-starter-kit/consts"
-	"github.com/ava-labs/hypersdk-starter-kit/vm"
 	"github.com/ava-labs/hypersdk/api/indexer"
 	"github.com/ava-labs/hypersdk/api/jsonrpc"
 	"github.com/ava-labs/hypersdk/auth"
@@ -20,6 +17,9 @@ import (
 	"github.com/ava-labs/hypersdk/codec"
 	"github.com/ava-labs/hypersdk/crypto/ed25519"
 	"github.com/ava-labs/hypersdk/tests/workload"
+	"github.com/bianyuanop/oraclevm/actions"
+	"github.com/bianyuanop/oraclevm/consts"
+	"github.com/bianyuanop/oraclevm/vm"
 )
 
 var _ workload.TxGenerator = (*TxGenerator)(nil)

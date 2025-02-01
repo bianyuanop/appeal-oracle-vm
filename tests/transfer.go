@@ -9,12 +9,12 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/ava-labs/hypersdk-starter-kit/actions"
-	"github.com/ava-labs/hypersdk-starter-kit/tests/workload"
 	"github.com/ava-labs/hypersdk/auth"
 	"github.com/ava-labs/hypersdk/chain"
 	"github.com/ava-labs/hypersdk/crypto/ed25519"
 	"github.com/ava-labs/hypersdk/tests/registry"
+	"github.com/bianyuanop/oraclevm/actions"
+	"github.com/bianyuanop/oraclevm/tests/workload"
 
 	tworkload "github.com/ava-labs/hypersdk/tests/workload"
 	ginkgo "github.com/onsi/ginkgo/v2"

@@ -8,15 +8,15 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	_ "github.com/ava-labs/hypersdk-starter-kit/tests" // include the tests that are shared between the integration and e2e
+	_ "github.com/bianyuanop/oraclevm/tests" // include the tests that are shared between the integration and e2e
 
-	"github.com/ava-labs/hypersdk-starter-kit/tests/workload"
-	"github.com/ava-labs/hypersdk-starter-kit/vm"
 	"github.com/ava-labs/hypersdk/auth"
 	"github.com/ava-labs/hypersdk/crypto/ed25519"
 	"github.com/ava-labs/hypersdk/tests/integration"
+	"github.com/bianyuanop/oraclevm/tests/workload"
+	"github.com/bianyuanop/oraclevm/vm"
 
-	lconsts "github.com/ava-labs/hypersdk-starter-kit/consts"
+	lconsts "github.com/bianyuanop/oraclevm/consts"
 	ginkgo "github.com/onsi/ginkgo/v2"
 )
 

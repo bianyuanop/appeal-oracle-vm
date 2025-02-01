@@ -1,4 +1,4 @@
-module github.com/ava-labs/hypersdk-starter-kit
+module github.com/bianyuanop/oraclevm
 
 go 1.22.8
 

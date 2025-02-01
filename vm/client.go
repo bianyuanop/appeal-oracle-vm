@@ -9,13 +9,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ava-labs/hypersdk-starter-kit/consts"
 	"github.com/ava-labs/hypersdk/api/jsonrpc"
 	"github.com/ava-labs/hypersdk/chain"
 	"github.com/ava-labs/hypersdk/codec"
 	"github.com/ava-labs/hypersdk/genesis"
 	"github.com/ava-labs/hypersdk/requester"
 	"github.com/ava-labs/hypersdk/utils"
+	"github.com/bianyuanop/oraclevm/consts"
 )
 
 const balanceCheckInterval = 500 * time.Millisecond

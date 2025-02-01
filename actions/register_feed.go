@@ -7,12 +7,12 @@ import (
 
 	"github.com/ava-labs/avalanchego/ids"
 
-	"github.com/ava-labs/hypersdk-starter-kit/storage"
 	"github.com/ava-labs/hypersdk/chain"
 	"github.com/ava-labs/hypersdk/codec"
 	"github.com/ava-labs/hypersdk/state"
+	"github.com/bianyuanop/oraclevm/storage"
 
-	mconsts "github.com/ava-labs/hypersdk-starter-kit/consts"
+	mconsts "github.com/bianyuanop/oraclevm/consts"
 )
 
 const (

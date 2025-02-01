@@ -6,11 +6,11 @@ package vm
 import (
 	"net/http"
 
-	"github.com/ava-labs/hypersdk-starter-kit/consts"
-	"github.com/ava-labs/hypersdk-starter-kit/storage"
 	"github.com/ava-labs/hypersdk/api"
 	"github.com/ava-labs/hypersdk/codec"
 	"github.com/ava-labs/hypersdk/genesis"
+	"github.com/bianyuanop/oraclevm/consts"
+	"github.com/bianyuanop/oraclevm/storage"
 )
 
 const JSONRPCEndpoint = "/morpheusapi"

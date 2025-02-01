@@ -20,9 +20,6 @@ import (
 	"golang.org/x/time/rate"
 
 	"github.com/ava-labs/avalanchego/ids"
-	"github.com/ava-labs/hypersdk-starter-kit/actions"
-	"github.com/ava-labs/hypersdk-starter-kit/consts"
-	"github.com/ava-labs/hypersdk-starter-kit/vm"
 	"github.com/ava-labs/hypersdk/api/jsonrpc"
 	"github.com/ava-labs/hypersdk/api/ws"
 	"github.com/ava-labs/hypersdk/auth"
@@ -31,6 +28,9 @@ import (
 	"github.com/ava-labs/hypersdk/crypto/ed25519"
 	"github.com/ava-labs/hypersdk/pubsub"
 	"github.com/ava-labs/hypersdk/utils"
+	"github.com/bianyuanop/oraclevm/actions"
+	"github.com/bianyuanop/oraclevm/consts"
+	"github.com/bianyuanop/oraclevm/vm"
 )
 
 const (

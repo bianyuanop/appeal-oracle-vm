@@ -4,11 +4,11 @@ import (
 	"context"
 	"testing"
 
-	"github.com/ava-labs/hypersdk-starter-kit/programs"
-	"github.com/ava-labs/hypersdk-starter-kit/storage"
 	"github.com/ava-labs/hypersdk/chain/chaintest"
 	"github.com/ava-labs/hypersdk/codec"
 	"github.com/ava-labs/hypersdk/state"
+	"github.com/bianyuanop/oraclevm/programs"
+	"github.com/bianyuanop/oraclevm/storage"
 	"github.com/stretchr/testify/require"
 )
 
