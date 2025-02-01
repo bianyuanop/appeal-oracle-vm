@@ -104,6 +104,7 @@ func TestReportIntoExists(t *testing.T) {
 			ExpectedOutputs: &ReportFeedResult{
 				FeedID:   r1.FeedID,
 				Majority: r1.Value,
+				Round:    r1.Round,
 				Sealing:  false,
 			},
 		},
@@ -151,6 +152,7 @@ func TestReportIntoExists(t *testing.T) {
 			ExpectedOutputs: &ReportFeedResult{
 				FeedID:   uint64(0),
 				Majority: []byte{9},
+				Round:    r2.Round,
 				Sealing:  false,
 			},
 		},
