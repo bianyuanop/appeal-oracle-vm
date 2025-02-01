@@ -41,12 +41,15 @@ func (*ReportFeed) GetTypeID() uint8 {
 	return mconsts.ReportFeedID
 }
 
+// TODO: some keys may be unknown, when txs are executed in parallel, it may break atomicity
 func (rf *ReportFeed) StateKeys(actor codec.Address, _ ids.ID) state.Keys {
 	return state.Keys{
 		string(storage.FeedKey(rf.FeedID)):                    state.Read,
 		string(storage.FeedDepositKey(rf.FeedID, actor)):      state.Read,
+		string(storage.FeedRewardVaultKey(rf.FeedID)):         state.Write | state.Read,
 		string(storage.ReportIndexKey(rf.FeedID, rf.Round)):   state.All,
 		string(storage.ReportKey(rf.FeedID, rf.Round, actor)): state.All,
+		string(storage.BalanceKey(actor)):                     state.All,
 	}
 }
 
