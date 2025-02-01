@@ -28,8 +28,11 @@ var (
 
 // A fee need to be paid for the feed registration
 type RegisterFeed struct {
-	FeedID     uint64 `serialize:"true" json:"feedID"`
-	FeedName   string `serialize:"true" json:"feedName"`
+	FeedID             uint64 `serialize:"true" json:"feedID"`
+	FeedName           string `serialize:"true" json:"feedName"`
+	RewardPerRound     uint64 `serialize:"true" json:"rewardPerRound"`
+	RewardVaultInitial uint64 `serialize:"true" json:"rewardVaultInitial"`
+	// TODO: to be changed to MaxDeposit, below max deposit, reporters' rewards are calculated by a reward function
 	MinDeposit uint64 `serialize:"true" json:"minDeposit"`
 	// num of miliseconds one appeal can delay the finalization
 	AppealEffect int64 `serialize:"true" json:"appealEffect"`
@@ -48,8 +51,9 @@ func (*RegisterFeed) GetTypeID() uint8 {
 
 func (rf *RegisterFeed) StateKeys(actor codec.Address, _ ids.ID) state.Keys {
 	return state.Keys{
-		string(storage.FeedIDKey()):        state.All,
-		string(storage.FeedKey(rf.FeedID)): state.All,
+		string(storage.FeedIDKey()):                   state.All,
+		string(storage.FeedKey(rf.FeedID)):            state.All,
+		string(storage.FeedRewardVaultKey(rf.FeedID)): state.All,
 	}
 }
 
@@ -84,6 +88,13 @@ func (rf *RegisterFeed) Execute(
 		return nil, err
 	}
 	if err := storage.IncrementFeedID(ctx, mu); err != nil {
+		return nil, err
+	}
+	// setup initial amount of reward to put in vault
+	if _, err := storage.SubBalance(ctx, mu, actor, rf.RewardVaultInitial); err != nil {
+		return nil, err
+	}
+	if err := storage.SetFeedRewardVault(ctx, mu, rf.FeedID, rf.RewardVaultInitial); err != nil {
 		return nil, err
 	}
 

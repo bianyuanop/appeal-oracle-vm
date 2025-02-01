@@ -99,8 +99,97 @@ func (rf *ReportFeed) Execute(
 		return nil, ErrReportIntoWrongRound
 	}
 
+	deposit, err := storage.GetFeedDeposit(ctx, mu, rf.FeedID, actor)
+	if err != nil {
+		return nil, err
+	}
+
+	if deposit < feedInfo.MinDeposit {
+		return nil, ErrReportingWithDepositBelowMin
+	}
+
+	// sealing the feed and distribute the rewards
 	if timestamp > feedRound.End {
-		// TODO: some rewards are needed for sealing
+		benignAddrs := make([]codec.Address, 0)
+		maliciousAddrs := make([]codec.Address, 0)
+		reporterToReport := make(map[codec.Address]programs.GeneralReport)
+
+		// add the sealing actor, the one issue this tx to the benign set
+		benignAddrs = append(benignAddrs, actor)
+
+		agg, err := programs.NewAggregator(feedInfo.FeedID)
+		if err != nil {
+			return nil, err
+		}
+
+		reporters, err := storage.GetReportAddresses(ctx, mu, rf.Round, rf.FeedID)
+		if err != nil {
+			return nil, err
+		}
+
+		// collect and aggregate all reports and calculate the majority
+		for _, reporter := range reporters {
+			reportValue, err := storage.GetReport(ctx, mu, rf.FeedID, rf.Round, reporter)
+			if err != nil {
+				return nil, err
+			}
+			report, err := programs.ReportFromRaw(reportValue, feedInfo.FeedID)
+			if err != nil {
+				return nil, err
+			}
+			if err := agg.InsertReport(report); err != nil {
+				return nil, err
+			}
+			reporterToReport[reporter] = report
+		}
+
+		// TODO: handle tie
+		agg.CalculateMajority()
+		// discriminate benign and malicious reporters
+		for _, reporter := range reporters {
+			report := reporterToReport[reporter]
+			isMajority, err := agg.IsMajority(report)
+			if err != nil {
+				return nil, err
+			}
+			if isMajority {
+				benignAddrs = append(benignAddrs, reporter)
+			} else {
+				maliciousAddrs = append(maliciousAddrs, reporter)
+			}
+		}
+
+		// calculate the total reward: RewardPerRound + deposits from malicious reporters
+		distributed := uint64(0)
+		totalReward := feedInfo.RewardPerRound
+		// sub reward from vault
+		if _, err := storage.SubFeedRewardVault(ctx, mu, rf.FeedID, feedInfo.RewardPerRound); err != nil {
+			return nil, err
+		}
+		// collect from malicious actors
+		for _, reporter := range maliciousAddrs {
+			deposit, err := storage.RemoveFeedDeposit(ctx, mu, rf.FeedID, reporter)
+			if err != nil {
+				return nil, err
+			}
+			totalReward += deposit
+		}
+		// transfer the reward to the benign accounts
+		for _, reporter := range benignAddrs {
+			reward := totalReward / uint64(len(benignAddrs))
+			if _, err := storage.AddBalance(ctx, mu, reporter, reward); err != nil {
+				return nil, err
+			}
+			distributed += reward
+		}
+		// transfer the left into the vault
+		if left := totalReward - distributed; left != 0 {
+			_, err := storage.AddFeedRewardVault(ctx, mu, rf.FeedID, left)
+			if err != nil {
+				return nil, err
+			}
+		}
+
 		newFeedRound := &common.RoundInfo{
 			RoundNumber: feedRound.RoundNumber + 1,
 			Start:       timestamp,
@@ -111,19 +200,21 @@ func (rf *ReportFeed) Execute(
 			return nil, err
 		}
 
+		// store the feed result
+		feedResultMajority, err := agg.Majority().Value()
+		if err != nil {
+			return nil, err
+		}
+		if err := storage.SetFeedResult(ctx, mu, rf.FeedID, rf.Round, feedResultMajority); err != nil {
+			return nil, err
+		}
+
 		return &ReportFeedResult{
-			FeedID:  rf.FeedID,
-			Sealing: true,
+			FeedID:   rf.FeedID,
+			Round:    rf.Round,
+			Majority: feedResultMajority,
+			Sealing:  true,
 		}, nil
-	}
-
-	deposit, err := storage.GetFeedDeposit(ctx, mu, rf.FeedID, actor)
-	if err != nil {
-		return nil, err
-	}
-
-	if deposit < feedInfo.MinDeposit {
-		return nil, ErrReportingWithDepositBelowMin
 	}
 
 	agg, err := programs.NewAggregator(feedInfo.ProgramID)
@@ -189,6 +280,7 @@ func (rf *ReportFeed) Execute(
 
 	return &ReportFeedResult{
 		FeedID:   rf.FeedID,
+		Round:    rf.Round,
 		Majority: feedResultValue,
 	}, nil
 }
@@ -206,6 +298,7 @@ var _ codec.Typed = (*ReportFeedResult)(nil)
 
 type ReportFeedResult struct {
 	FeedID   uint64 `serialize:"true" json:"feedID"`
+	Round    uint64 `serialize:"true" json:"round"`
 	Majority []byte `serialize:"true" json:"majority"`
 	// the last tx reports into an expired round will seal the feed at that round and increment the round number
 	Sealing bool `serialize:"true" json:"sealing"`

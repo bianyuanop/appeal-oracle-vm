@@ -603,6 +603,20 @@ func SetFeedDeposit(
 	return setBalance(ctx, mu, k, amount)
 }
 
+func RemoveFeedDeposit(
+	ctx context.Context,
+	mu state.Mutable,
+	feedID uint64,
+	acct codec.Address,
+) (uint64, error) {
+	k := FeedDepositKey(feedID, acct)
+	deposit, _, err := innerGetBalance(mu.GetValue(ctx, k))
+	if err != nil {
+		return 0, err
+	}
+	return deposit, setBalance(ctx, mu, k, 0)
+}
+
 func GetFeedDepositFromState(
 	ctx context.Context,
 	f ReadState,
@@ -613,4 +627,101 @@ func GetFeedDepositFromState(
 	values, errs := f(ctx, [][]byte{k})
 	deposit, _, err := innerGetBalance(values[0], errs[0])
 	return deposit, err
+}
+
+// store reward vault for given feed
+const feedRewardVaultPrefix byte = metadata.DefaultMinimumPrefix + 7
+const FeedRewardVaultChunks uint16 = 1
+
+// [feedRewardVaultPrefix] + [feedID]
+func FeedRewardVaultKey(feedID uint64) (k []byte) {
+	k = make([]byte, 1+consts.Uint64Len+consts.Uint16Len)
+	k[0] = feedRewardVaultPrefix
+	binary.BigEndian.PutUint64(k[1:], feedID)
+	binary.BigEndian.PutUint16(k[1+consts.Uint64Len:], FeedRewardVaultChunks)
+	return
+}
+
+func GetFeedRewardVault(
+	ctx context.Context,
+	im state.Immutable,
+	feedID uint64,
+) (uint64, error) {
+	k := FeedRewardVaultKey(feedID)
+	value, _, err := innerGetBalance(im.GetValue(ctx, k))
+	return value, err
+}
+
+func SetFeedRewardVault(
+	ctx context.Context,
+	mu state.Mutable,
+	feedID uint64,
+	amount uint64,
+) error {
+	k := FeedRewardVaultKey(feedID)
+	return setBalance(ctx, mu, k, amount)
+}
+
+func AddFeedRewardVault(
+	ctx context.Context,
+	mu state.Mutable,
+	feedID uint64,
+	amount uint64,
+) (uint64, error) {
+	k := FeedRewardVaultKey(feedID)
+	reward, _, err := innerGetBalance(mu.GetValue(ctx, k))
+	if err != nil {
+		return 0, err
+	}
+	nbal, err := smath.Add(reward, amount)
+	if err != nil {
+		return 0, fmt.Errorf(
+			"%w: could not add reward (reward=%d, feedID=%d, amount=%d)",
+			ErrInvalidBalance,
+			reward,
+			feedID,
+			amount,
+		)
+	}
+	return nbal, setBalance(ctx, mu, k, nbal)
+}
+
+func SubFeedRewardVault(
+	ctx context.Context,
+	mu state.Mutable,
+	feedID uint64,
+	amount uint64,
+) (uint64, error) {
+	k := FeedRewardVaultKey(feedID)
+	reward, _, err := innerGetBalance(mu.GetValue(ctx, k))
+	if err != nil {
+		return 0, err
+	}
+	nbal, err := smath.Sub(reward, amount)
+	if err != nil {
+		return 0, fmt.Errorf(
+			"%w: could not subtract reward (reward=%d, feedID=%d, amount=%d)",
+			ErrInvalidBalance,
+			reward,
+			feedID,
+			amount,
+		)
+	}
+	if nbal == 0 {
+		// If there is no balance left, we should delete the record instead of
+		// setting it to 0.
+		return 0, mu.Remove(ctx, k)
+	}
+	return nbal, setBalance(ctx, mu, k, nbal)
+}
+
+func GetFeedRewardVaultFromState(
+	ctx context.Context,
+	f ReadState,
+	feedID uint64,
+) (uint64, error) {
+	k := FeedRewardVaultKey(feedID)
+	values, errs := f(ctx, [][]byte{k})
+	rewardTotal, _, err := innerGetBalance(values[0], errs[0])
+	return rewardTotal, err
 }

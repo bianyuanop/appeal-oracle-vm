@@ -14,7 +14,7 @@ const (
 )
 
 const (
-	StartingFeedID = 0
+	StartingFeedID = 1
 )
 
 var ID ids.ID

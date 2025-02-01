@@ -7,7 +7,8 @@ const (
 	// Action TypeIDs
 	TransferID     uint8 = 0
 	RegisterFeedID uint8 = 1
-	DepositFeedID  uint8 = 2
-	ReportFeedID   uint8 = 3
-	BribeID        uint8 = 4
+	FundFeedID     uint8 = 2
+	DepositFeedID  uint8 = 3
+	ReportFeedID   uint8 = 4
+	BribeID        uint8 = 5
 )
