@@ -60,20 +60,10 @@ func (rf *DepositFeed) Execute(
 		return nil, ErrDepositFeedGreaterThanHighest
 	}
 
-	balance, err := storage.GetBalance(ctx, mu, actor)
-	if err != nil {
+	if _, err := storage.SubBalance(ctx, mu, actor, rf.Amount); err != nil {
 		return nil, err
 	}
 
-	if balance < rf.Amount {
-		return nil, ErrBalanceBelowDepositAmount
-	}
-
-	// deduct amount and set deposit storage
-	balance -= rf.Amount
-	if err := storage.SetBalance(ctx, mu, actor, balance); err != nil {
-		return nil, err
-	}
 	if err := storage.SetFeedDeposit(ctx, mu, rf.FeedID, actor, rf.Amount); err != nil {
 		return nil, err
 	}

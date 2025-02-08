@@ -34,10 +34,10 @@ type RegisterFeed struct {
 	RewardVaultInitial uint64 `serialize:"true" json:"rewardVaultInitial"`
 	// TODO: to be changed to MaxDeposit, below max deposit, reporters' rewards are calculated by a reward function
 	MinDeposit uint64 `serialize:"true" json:"minDeposit"`
-	// num of miliseconds one appeal can delay the finalization
-	AppealEffect int64 `serialize:"true" json:"appealEffect"`
-	// max delay appeals can result
-	AppealMaxDelay int64 `serialize:"true" json:"appealMaxDelay"`
+
+	AppealFee      uint64 `serialize:"true" json:"appealFee"`      // fee has to be paid or split by the appeal issuer(s)
+	AppealEffect   int64  `serialize:"true" json:"appealEffect"`   // num of miliseconds one appeal can delay the finalization
+	AppealMaxDelay int64  `serialize:"true" json:"appealMaxDelay"` // max delay appeals can result
 	// finalize interval in mili without any appeals
 	FinalizeInterval int64  `serialize:"true" json:"finalizeInterval"`
 	ProgramID        uint64 `serialize:"true" json:"programID"`

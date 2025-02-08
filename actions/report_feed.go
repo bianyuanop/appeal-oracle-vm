@@ -112,7 +112,7 @@ func (rf *ReportFeed) Execute(
 	}
 
 	// sealing the feed and distribute the rewards
-	if timestamp > feedRound.End {
+	if timestamp > feedRound.EndAt() {
 		benignAddrs := make([]codec.Address, 0)
 		maliciousAddrs := make([]codec.Address, 0)
 		reporterToReport := make(map[codec.Address]programs.GeneralReport)

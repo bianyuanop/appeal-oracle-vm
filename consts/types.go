@@ -10,5 +10,6 @@ const (
 	FundFeedID     uint8 = 2
 	DepositFeedID  uint8 = 3
 	ReportFeedID   uint8 = 4
-	BribeID        uint8 = 5
+	AppealFeedID   uint8 = 5
+	BribeID        uint8 = 6
 )
