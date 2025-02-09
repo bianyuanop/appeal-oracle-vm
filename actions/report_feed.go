@@ -24,6 +24,7 @@ var (
 	ErrReportFeedGreaterThanHighest = errors.New("reporting feedID is greater than highest")
 	ErrReportIntoWrongRound         = errors.New("reporting into wrong round")
 	ErrReportingWithDepositBelowMin = errors.New("reporting with deposit below minimum")
+	ErrFeedNotExists                = errors.New("reporting feed not exists")
 )
 
 var (
@@ -61,18 +62,12 @@ func (rf *ReportFeed) Execute(
 	actor codec.Address,
 	_ ids.ID,
 ) (codec.Typed, error) {
-	highestFeedID, err := storage.GetHighestFeedID(ctx, mu)
-	if err != nil {
-		return nil, err
-	}
-
-	if rf.FeedID > highestFeedID {
-		return nil, ErrReportFeedGreaterThanHighest
-	}
-
 	rawFeedInfo, err := storage.GetFeed(ctx, mu, rf.FeedID)
 	if err != nil {
 		return nil, err
+	}
+	if rawFeedInfo == nil {
+		return nil, ErrFeedNotExists
 	}
 
 	feedInfo, err := UnmarshalFeed(rawFeedInfo)

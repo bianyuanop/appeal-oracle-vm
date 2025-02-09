@@ -51,13 +51,13 @@ func (rf *DepositFeed) Execute(
 	actor codec.Address,
 	_ ids.ID,
 ) (codec.Typed, error) {
-	highestFeedID, err := storage.GetHighestFeedID(ctx, mu)
+	feedInfoRaw, err := storage.GetFeed(ctx, mu, rf.FeedID)
 	if err != nil {
 		return nil, err
 	}
 
-	if rf.FeedID > highestFeedID {
-		return nil, ErrDepositFeedGreaterThanHighest
+	if feedInfoRaw == nil {
+		return nil, ErrFeedNotExists
 	}
 
 	if _, err := storage.SubBalance(ctx, mu, actor, rf.Amount); err != nil {
@@ -94,9 +94,4 @@ type DepositFeedResult struct {
 
 func (*DepositFeedResult) GetTypeID() uint8 {
 	return mconsts.DepositFeedID // Common practice is to use the action ID
-}
-
-// TODO: to be implemented
-func (*DepositFeed) Marshal() ([]byte, error) {
-	return nil, nil
 }

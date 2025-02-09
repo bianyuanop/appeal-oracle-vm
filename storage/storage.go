@@ -4,10 +4,12 @@
 package storage
 
 import (
+	"bytes"
 	"context"
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/ava-labs/avalanchego/database"
 
@@ -630,7 +632,7 @@ func GetFeedDepositFromState(
 }
 
 // store reward vault for given feed
-const feedRewardVaultPrefix byte = metadata.DefaultMinimumPrefix + 7
+const feedRewardVaultPrefix byte = metadata.DefaultMinimumPrefix + 8
 const FeedRewardVaultChunks uint16 = 1
 
 // [feedRewardVaultPrefix] + [feedID]
@@ -724,4 +726,127 @@ func GetFeedRewardVaultFromState(
 	values, errs := f(ctx, [][]byte{k})
 	rewardTotal, _, err := innerGetBalance(values[0], errs[0])
 	return rewardTotal, err
+}
+
+// store stake for given feed
+const feedBribePrefix byte = metadata.DefaultMinimumPrefix + 9
+const FeedBribeChunks uint16 = 10
+
+// [feedDepositPrefix] + [feedID] + [recipient] + [round]
+func FeedBribeKey(feedID uint64, account codec.Address, round uint64) (k []byte) {
+	k = make([]byte, 1+consts.Uint64Len+codec.AddressLen+consts.Uint64Len+consts.Uint16Len)
+	k[0] = feedBribePrefix
+	binary.BigEndian.PutUint64(k[1:], feedID)
+	copy(k[1+consts.Uint64Len:], account[:])
+	binary.BigEndian.PutUint64(k[1+consts.Uint64Len+codec.AddressLen:], round)
+	binary.BigEndian.PutUint16(k[1+consts.Uint64Len+codec.AddressLen+consts.Uint64Len:], FeedBribeChunks)
+	return
+}
+
+func GetFeedBribes(
+	ctx context.Context,
+	im state.Immutable,
+	feedID uint64,
+	recipient codec.Address,
+	round uint64,
+) ([]*common.BribeInfo, error) {
+	k := FeedBribeKey(feedID, recipient, round)
+	value, exists, err := innerGetValue(im.GetValue(ctx, k))
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, nil
+	}
+	fmt.Printf("bvalue: %+v\n", value)
+
+	return common.UnmarshalBribeInfoArray(value)
+}
+
+func AddFeedBribe(
+	ctx context.Context,
+	mu state.Mutable,
+	feedID uint64,
+	recipient codec.Address,
+	round uint64,
+	info *common.BribeInfo,
+) error {
+	k := FeedBribeKey(feedID, recipient, round)
+	value, exists, err := innerGetValue(mu.GetValue(ctx, k))
+	if err != nil {
+		return err
+	}
+	var bribes []*common.BribeInfo
+	if !exists {
+		bribes = make([]*common.BribeInfo, 0, 1)
+	} else {
+		bribes, err = common.UnmarshalBribeInfoArray(value)
+		if err != nil {
+			return err
+		}
+	}
+
+	bribeIndex := slices.IndexFunc(bribes, func(b *common.BribeInfo) bool {
+		return bytes.Equal(b.Provider[:], info.Provider[:])
+	})
+	if bribeIndex != -1 {
+		return common.ErrBribeExists
+	}
+
+	bribes = append(bribes, info)
+	bribesRaw, err := common.MarshalBribeInfoArray(bribes)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("num bribes: %d, raw: %+v\n", len(bribes), bribesRaw)
+	return mu.Insert(ctx, k, bribesRaw)
+}
+
+func RemoveFeedBribe(
+	ctx context.Context,
+	mu state.Mutable,
+	feedID uint64,
+	recipient codec.Address,
+	round uint64,
+	provider codec.Address,
+) (*common.BribeInfo, error) {
+	k := FeedBribeKey(feedID, recipient, round)
+	bribeRaw, exists, err := innerGetValue(mu.GetValue(ctx, k))
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, nil
+	}
+	bribes, err := common.UnmarshalBribeInfoArray(bribeRaw)
+	if err != nil {
+		return nil, err
+	}
+	bribeIndex := slices.IndexFunc(bribes, func(b *common.BribeInfo) bool {
+		return bytes.Equal(b.Provider[:], provider[:])
+	})
+	if bribeIndex == -1 {
+		return nil, common.ErrBribeNotExists
+	}
+	// remove and update
+	bribe2remove := bribes[bribeIndex]
+	bribes = slices.Delete(bribes, bribeIndex, bribeIndex+1)
+	bribeRaw, err = common.MarshalBribeInfoArray(bribes)
+	if err != nil {
+		return nil, err
+	}
+	return bribe2remove, mu.Insert(ctx, k, bribeRaw)
+}
+
+func GetFeedBribeFromState(
+	ctx context.Context,
+	f ReadState,
+	feedID uint64,
+	recipient codec.Address,
+	round uint64,
+) (uint64, error) {
+	k := FeedBribeKey(feedID, recipient, round)
+	values, errs := f(ctx, [][]byte{k})
+	deposit, _, err := innerGetBalance(values[0], errs[0])
+	return deposit, err
 }

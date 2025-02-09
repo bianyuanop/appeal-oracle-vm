@@ -103,3 +103,62 @@ func UnmarshalRoundInfo(raw []byte) (*RoundInfo, error) {
 		Appeals:     appeals,
 	}, nil
 }
+
+type BribeInfo struct {
+	Amount   uint64
+	Provider codec.Address
+	Value    []byte // the reporter can be rewarded only when the submitted value exactly match with reported
+}
+
+func (b *BribeInfo) Marshal(p *codec.Packer) error {
+	p.PackUint64(b.Amount)
+	p.PackAddress(b.Provider)
+	p.PackBytes(b.Value)
+	if p.Err() != nil {
+		return p.Err()
+	}
+	return nil
+}
+
+func UnmarshalBribeInfo(p *codec.Packer) (*BribeInfo, error) {
+	ret := new(BribeInfo)
+	ret.Amount = p.UnpackUint64(false)
+	p.UnpackAddress(&ret.Provider)
+	p.UnpackBytes(MaxFeedValue, true, &ret.Value)
+	if err := p.Err(); err != nil {
+		return nil, err
+	}
+	return ret, nil
+}
+
+func MarshalBribeInfoArray(bribes []*BribeInfo) ([]byte, error) {
+	p := codec.NewWriter(1024, consts.NetworkSizeLimit)
+	p.PackInt(uint32(len(bribes)))
+	for _, b := range bribes {
+		if err := b.Marshal(p); err != nil {
+			return nil, err
+		}
+	}
+	if err := p.Err(); err != nil {
+		return nil, err
+	}
+	return p.Bytes(), nil
+}
+
+func UnmarshalBribeInfoArray(raw []byte) ([]*BribeInfo, error) {
+	p := codec.NewReader(raw, consts.NetworkSizeLimit)
+	numBribes := p.UnpackInt(false)
+	if err := p.Err(); err != nil {
+		return nil, err
+	}
+
+	ret := make([]*BribeInfo, 0, numBribes)
+	for i := 0; i < int(numBribes); i++ {
+		info, err := UnmarshalBribeInfo(p)
+		if err != nil {
+			return nil, err
+		}
+		ret = append(ret, info)
+	}
+	return ret, nil
+}
