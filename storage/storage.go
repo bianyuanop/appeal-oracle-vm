@@ -758,9 +758,23 @@ func GetFeedBribes(
 	if !exists {
 		return nil, nil
 	}
-	fmt.Printf("bvalue: %+v\n", value)
-
 	return common.UnmarshalBribeInfoArray(value)
+}
+
+func SetFeedBribes(
+	ctx context.Context,
+	mu state.Mutable,
+	feedID uint64,
+	recipient codec.Address,
+	round uint64,
+	bribes []*common.BribeInfo,
+) error {
+	k := FeedBribeKey(feedID, recipient, round)
+	bribesRaw, err := common.MarshalBribeInfoArray(bribes)
+	if err != nil {
+		return err
+	}
+	return mu.Insert(ctx, k, bribesRaw)
 }
 
 func AddFeedBribe(

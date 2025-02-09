@@ -1,6 +1,7 @@
 package actions
 
 import (
+	"bytes"
 	"context"
 	"errors"
 
@@ -266,20 +267,45 @@ func (rf *ReportFeed) Execute(
 		return nil, err
 	}
 
+	// check if there's any bribes related to this reporter
+	bribes, err := storage.GetFeedBribes(ctx, mu, rf.FeedID, actor, rf.Round)
+	if err != nil {
+		return nil, err
+	}
+
+	// if this report fullfills any bribery, withdraw the bribe amount to the reporter
+	newBribes := make([]*common.BribeInfo, 0)
+	bribesFullfilled := []*common.BribeInfo(nil)
+	for _, bribe := range bribes {
+		if bytes.Equal(bribe.Value, rf.Value) {
+			_, err := storage.AddBalance(ctx, mu, actor, bribe.Amount)
+			if err != nil {
+				return nil, err
+			}
+			bribesFullfilled = append(bribesFullfilled, bribe)
+			continue
+		}
+		newBribes = append(newBribes, bribe)
+	}
+	if err := storage.SetFeedBribes(ctx, mu, feedInfo.FeedID, actor, rf.Round, newBribes); err != nil {
+		return nil, err
+	}
+
+	// add this report to the report indexes and store the report
 	reportAddresses = append(reportAddresses, actor)
 	if err := storage.SetReportAddresses(ctx, mu, rf.Round, rf.FeedID, reportAddresses); err != nil {
 		return nil, err
 	}
-	// store this report
 	err = storage.SetReport(ctx, mu, rf.FeedID, rf.Round, actor, rf.Value)
 	if err != nil {
 		return nil, err
 	}
 
 	return &ReportFeedResult{
-		FeedID:   rf.FeedID,
-		Round:    rf.Round,
-		Majority: feedResultValue,
+		FeedID:           rf.FeedID,
+		Round:            rf.Round,
+		Majority:         feedResultValue,
+		BribesFullfilled: bribesFullfilled,
 	}, nil
 }
 
@@ -299,7 +325,8 @@ type ReportFeedResult struct {
 	Round    uint64 `serialize:"true" json:"round"`
 	Majority []byte `serialize:"true" json:"majority"`
 	// the last tx reports into an expired round will seal the feed at that round and increment the round number
-	Sealing bool `serialize:"true" json:"sealing"`
+	Sealing          bool                `serialize:"true" json:"sealing"`
+	BribesFullfilled []*common.BribeInfo `serialize:"true" json:"bribesFullfilled"`
 }
 
 func (*ReportFeedResult) GetTypeID() uint8 {

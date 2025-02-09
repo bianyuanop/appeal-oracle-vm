@@ -72,6 +72,20 @@ func TestReportIntoExists(t *testing.T) {
 		Value:  []byte{9}, // uint8(9)
 		Round:  1,
 	}
+
+	bribeProvider := codec.CreateAddress(0, ids.GenerateTestID())
+	bribeInfo := &common.BribeInfo{
+		Amount:   1e9,
+		Provider: bribeProvider,
+		Value:    []byte{11},
+	}
+	testActor4 := codec.CreateAddress(0, ids.GenerateTestID())
+	r4 := &ReportFeed{
+		FeedID: 0,
+		Value:  []byte{11}, // uint8(11)
+		Round:  1,
+	}
+
 	executionTime := time.Now().UnixMilli()
 	tests := []chaintest.ActionTest{
 		{
@@ -102,10 +116,11 @@ func TestReportIntoExists(t *testing.T) {
 				require.Equal(t, testActor1, reportAddresses[0])
 			},
 			ExpectedOutputs: &ReportFeedResult{
-				FeedID:   r1.FeedID,
-				Majority: r1.Value,
-				Round:    r1.Round,
-				Sealing:  false,
+				FeedID:           r1.FeedID,
+				Majority:         r1.Value,
+				Round:            r1.Round,
+				BribesFullfilled: nil,
+				Sealing:          false,
 			},
 		},
 		{
@@ -154,6 +169,51 @@ func TestReportIntoExists(t *testing.T) {
 				Majority: []byte{9},
 				Round:    r2.Round,
 				Sealing:  false,
+			},
+		},
+		{
+			Name:   "ReporterCanAcceptBribery",
+			Actor:  testActor4,
+			Action: r4,
+			State: func() state.Mutable {
+				// set up feed in state
+				ctx := context.TODO()
+				store := chaintest.NewInMemoryStore()
+				err := storage.IncrementFeedID(ctx, store)
+				require.NoError(t, err)
+				err = storage.SetFeed(ctx, store, uint64(0), simpleFeedRaw)
+				require.NoError(t, err)
+				err = storage.AddFeedBribe(ctx, store, r4.FeedID, testActor4, r4.Round, bribeInfo)
+				require.NoError(t, err)
+				return store
+			}(),
+			Timestamp: executionTime,
+			Assertion: func(ctx context.Context, t *testing.T, m state.Mutable) {
+				// check report indexes are stored
+				expectedRereportAddrs := []codec.Address{testActor4}
+				reportAddrs, err := storage.GetReportAddresses(ctx, m, r1.Round, r1.FeedID)
+				require.NoError(t, err)
+				require.Equal(t, len(expectedRereportAddrs), len(reportAddrs))
+				require.Equal(t, expectedRereportAddrs, reportAddrs)
+				// check r4 report is stored
+				r4ReportValue, err := storage.GetReport(ctx, m, r1.FeedID, r1.Round, testActor4)
+				require.NoError(t, err)
+				require.Equal(t, r4.Value, r4ReportValue)
+				// check result is correct
+				feedResult, err := storage.GetFeedResult(ctx, m, r1.FeedID, r1.Round)
+				require.NoError(t, err)
+				require.Equal(t, feedResult, r4.Value)
+				// check bribery is accepted
+				a4bal, err := storage.GetBalance(ctx, m, testActor4)
+				require.NoError(t, err)
+				require.Equal(t, bribeInfo.Amount, a4bal)
+			},
+			ExpectedOutputs: &ReportFeedResult{
+				FeedID:           r4.FeedID,
+				Majority:         r4.Value,
+				Round:            r4.Round,
+				BribesFullfilled: []*common.BribeInfo{bribeInfo},
+				Sealing:          false,
 			},
 		},
 	}
