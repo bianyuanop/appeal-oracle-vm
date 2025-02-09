@@ -812,7 +812,6 @@ func AddFeedBribe(
 	if err != nil {
 		return err
 	}
-	fmt.Printf("num bribes: %d, raw: %+v\n", len(bribes), bribesRaw)
 	return mu.Insert(ctx, k, bribesRaw)
 }
 

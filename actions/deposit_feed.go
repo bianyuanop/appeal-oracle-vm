@@ -3,6 +3,7 @@ package actions
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/hypersdk/chain"
@@ -61,6 +62,9 @@ func (rf *DepositFeed) Execute(
 	}
 
 	if _, err := storage.SubBalance(ctx, mu, actor, rf.Amount); err != nil {
+		if strings.Contains(err.Error(), "invalid balance: could not subtract balance") {
+			return nil, ErrBalanceBelowDepositAmount
+		}
 		return nil, err
 	}
 

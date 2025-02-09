@@ -84,7 +84,7 @@ func TestDepositFeed(t *testing.T) {
 				require.NoError(t, err)
 				return store
 			}(),
-			ExpectedErr: ErrDepositFeedGreaterThanHighest,
+			ExpectedErr: ErrFeedNotExists,
 		},
 	}
 

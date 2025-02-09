@@ -30,7 +30,7 @@ func TestReportIntoANonExistsFeed(t *testing.T) {
 				store := chaintest.NewInMemoryStore()
 				return store
 			}(),
-			ExpectedErr: ErrReportFeedGreaterThanHighest,
+			ExpectedErr: ErrFeedNotExists,
 		},
 	}
 
