@@ -24,19 +24,19 @@ import (
 	ginkgo "github.com/onsi/ginkgo/v2"
 )
 
-const owner = "morpheusvm-e2e-tests"
+const owner = "oraclevm-e2e-tests"
 
 var flagVars *e2e.FlagVars
 
 func TestE2e(t *testing.T) {
-	ginkgo.RunSpecs(t, "morpheusvm e2e test suites")
+	ginkgo.RunSpecs(t, "oraclevm e2e test suites")
 }
 
 func init() {
 	flagVars = e2e.RegisterFlags()
 }
 
-// Construct tmpnet network with a single MorpheusVM Subnet
+// Construct tmpnet network with a single oraclevm Subnet
 var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 	require := require.New(ginkgo.GinkgoT())
 
@@ -46,7 +46,7 @@ var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 	expectedABI, err := abi.NewABI(vm.ActionParser.GetRegisteredTypes(), vm.OutputParser.GetRegisteredTypes())
 	require.NoError(err)
 
-	// Import HyperSDK e2e test coverage and inject MorpheusVM name
+	// Import HyperSDK e2e test coverage and inject oraclevm name
 	// and workload factory to orchestrate the test.
 	spamHelper := throughput.SpamHelper{
 		KeyType: auth.ED25519Key,

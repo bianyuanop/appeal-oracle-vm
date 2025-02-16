@@ -13,10 +13,10 @@ SCRIPT_DIR=$(cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)
 source "$SCRIPT_DIR"/../../../scripts/common/build.sh
 # shellcheck source=/scripts/constants.sh
 source "$SCRIPT_DIR"/../../../scripts/constants.sh
-# Construct the correct path to morpheusvm directory
-MORPHEUSVM_PATH=$(
+# Construct the correct path to oraclevm directory
+oraclevm_PATH=$(
   cd "$(dirname "${BASH_SOURCE[0]}")"
   cd .. && pwd
 )
 
-build_project "$MORPHEUSVM_PATH" "morpheusvm" "pkEmJQuTUic3dxzg8EYnktwn4W7uCHofNcwiYo458vodAUbY7"
+build_project "$oraclevm_PATH" "oraclevm" "pkEmJQuTUic3dxzg8EYnktwn4W7uCHofNcwiYo458vodAUbY7"

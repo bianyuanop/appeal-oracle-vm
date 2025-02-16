@@ -9,6 +9,8 @@ import (
 	"github.com/ava-labs/hypersdk/api"
 	"github.com/ava-labs/hypersdk/codec"
 	"github.com/ava-labs/hypersdk/genesis"
+	"github.com/bianyuanop/oraclevm/actions"
+	"github.com/bianyuanop/oraclevm/common"
 	"github.com/bianyuanop/oraclevm/consts"
 	"github.com/bianyuanop/oraclevm/storage"
 )
@@ -62,4 +64,91 @@ func (j *JSONRPCServer) Balance(req *http.Request, args *BalanceArgs, reply *Bal
 	}
 	reply.Amount = balance
 	return err
+}
+
+type FeedInfoArgs struct {
+	FeedID uint64 `json:"feedID"`
+}
+
+type FeedInfoReply struct {
+	Info *actions.RegisterFeed `json:"info"`
+}
+
+func (j *JSONRPCServer) FeedInfo(req *http.Request, args *FeedInfoArgs, reply *FeedInfoReply) error {
+	ctx, span := j.vm.Tracer().Start(req.Context(), "Server.FeedInfo")
+	defer span.End()
+
+	feedInfoRaw, err := storage.GetFeedFromState(ctx, j.vm.ReadState, args.FeedID)
+	if err != nil {
+		return err
+	}
+	feedInfo, err := actions.UnmarshalFeed(feedInfoRaw)
+	if err != nil {
+		return err
+	}
+
+	reply.Info = feedInfo
+	return nil
+}
+
+type FeedResultArgs struct {
+	FeedID uint64 `json:"feedID"`
+	Round  uint64 `json:"round"`
+}
+
+type FeedResultReply struct {
+	Value     []byte `json:"value"`
+	ProgramID uint64 `json:"programID"`
+	Finalized bool   `json:"finalized"`
+}
+
+func (j *JSONRPCServer) FeedResult(req *http.Request, args *FeedResultArgs, reply *FeedResultReply) error {
+	ctx, span := j.vm.Tracer().Start(req.Context(), "Server.FeedResult")
+	defer span.End()
+
+	feedInfoRaw, err := storage.GetFeedFromState(ctx, j.vm.ReadState, args.FeedID)
+	if err != nil {
+		return err
+	}
+	feedInfo, err := actions.UnmarshalFeed(feedInfoRaw)
+	if err != nil {
+		return err
+	}
+
+	rawFeed, err := storage.GetFeedResultFromState(ctx, j.vm.ReadState, args.FeedID, args.Round)
+	if err != nil {
+		return err
+	}
+
+	roundInfo, err := storage.GetFeedRoundFromState(ctx, j.vm.ReadState, args.FeedID)
+	if err != nil {
+		return err
+	}
+
+	reply.Value = rawFeed
+	reply.ProgramID = feedInfo.ProgramID
+	reply.Finalized = roundInfo.RoundNumber > args.Round
+	return nil
+}
+
+type BribeInfoArgs struct {
+	FeedID    uint64        `json:"feedID"`
+	Recipient codec.Address `json:"recipient"`
+	Round     uint64        `json:"round"`
+}
+
+type BribeInfoReply struct {
+	Bribes []*common.BribeInfo `json:"bribes"`
+}
+
+func (j *JSONRPCServer) BribeInfo(req *http.Request, args *BribeInfoArgs, reply *BribeInfoReply) error {
+	ctx, span := j.vm.Tracer().Start(req.Context(), "Server.BribeInfo")
+	defer span.End()
+
+	bribes, err := storage.GetFeedBribesFromState(ctx, j.vm.ReadState, args.FeedID, args.Recipient, args.Round)
+	if err != nil {
+		return err
+	}
+	reply.Bribes = bribes
+	return nil
 }

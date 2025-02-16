@@ -105,9 +105,10 @@ func UnmarshalRoundInfo(raw []byte) (*RoundInfo, error) {
 }
 
 type BribeInfo struct {
-	Amount   uint64
-	Provider codec.Address
-	Value    []byte // the reporter can be rewarded only when the submitted value exactly match with reported
+	Amount   uint64        `json:"amount"`
+	Provider codec.Address `json:"provider"`
+	// the reporter can be rewarded only when the submitted value exactly match with reported
+	Value []byte `json:"value"`
 }
 
 func (b *BribeInfo) Marshal(p *codec.Packer) error {

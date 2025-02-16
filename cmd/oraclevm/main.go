@@ -13,14 +13,14 @@ import (
 	"github.com/ava-labs/avalanchego/vms/rpcchainvm"
 	"github.com/spf13/cobra"
 
-	"github.com/bianyuanop/oraclevm/cmd/morpheusvm/version"
+	"github.com/bianyuanop/oraclevm/cmd/oraclevm/version"
 	"github.com/bianyuanop/oraclevm/vm"
 )
 
 var rootCmd = &cobra.Command{
-	Use:        "morpheusvm",
+	Use:        "oraclevm",
 	Short:      "BaseVM agent",
-	SuggestFor: []string{"morpheusvm"},
+	SuggestFor: []string{"oraclevm"},
 	RunE:       runFunc,
 }
 
@@ -36,7 +36,7 @@ func init() {
 
 func main() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Fprintf(os.Stderr, "morpheusvm failed %v\n", err)
+		fmt.Fprintf(os.Stderr, "oraclevm failed %v\n", err)
 		os.Exit(1)
 	}
 	os.Exit(0)

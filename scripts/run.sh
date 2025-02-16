@@ -8,7 +8,7 @@ set -e
 # MODE=test ./scripts/run.sh
 MODE=${MODE:-run}
 if ! [[ "$0" =~ scripts/run.sh ]]; then
-  echo "must be run from morpheusvm root"
+  echo "must be run from oraclevm root"
   exit 255
 fi
 
@@ -59,7 +59,7 @@ fi
 
 ############################
 
-echo "building morpheusvm"
+echo "building oraclevm"
 
 # delete previous (if exists)
 rm -f "${HYPERSDK_DIR}"/avalanchego-"${VERSION}"/plugins/qCNyZHrs3rZX458wPJXPJJypPf6w423A84jnfbdP2TPEmEE9u
@@ -67,7 +67,7 @@ rm -f "${HYPERSDK_DIR}"/avalanchego-"${VERSION}"/plugins/qCNyZHrs3rZX458wPJXPJJy
 # rebuild with latest code
 go build \
 -o "${HYPERSDK_DIR}"/avalanchego-"${VERSION}"/plugins/qCNyZHrs3rZX458wPJXPJJypPf6w423A84jnfbdP2TPEmEE9u \
-./cmd/morpheusvm
+./cmd/oraclevm
 
 ############################
 echo "building e2e.test"

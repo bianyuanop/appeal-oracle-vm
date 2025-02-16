@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	Name   = "morpheusvm"
+	Name   = "oraclevm"
 	Symbol = "RED"
 )
 

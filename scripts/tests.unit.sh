@@ -5,7 +5,7 @@
 set -e
 
 if ! [[ "$0" =~ scripts/tests.unit.sh ]]; then
-  echo "must be run from morpheusvm root"
+  echo "must be run from oraclevm root"
   exit 255
 fi
 

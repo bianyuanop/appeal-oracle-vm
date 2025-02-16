@@ -21,7 +21,7 @@ import (
 )
 
 func TestIntegration(t *testing.T) {
-	ginkgo.RunSpecs(t, "morpheusvm integration test suites")
+	ginkgo.RunSpecs(t, "oraclevm integration test suites")
 }
 
 var _ = ginkgo.BeforeSuite(func() {

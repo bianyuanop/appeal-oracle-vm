@@ -1,7 +1,7 @@
 # HyperSDK Starter Kit
 
 HyperSDK Starter includes:
-- Boilerplate VM based on [MorpheusVM](https://github.com/ava-labs/hypersdk/tree/main/examples/morpheusvm)
+- Boilerplate VM based on [oraclevm](https://github.com/ava-labs/hypersdk/tree/main/examples/oraclevm)
 - Universal frontend
 - Metamask Snap wallet
 - A quick start guide (this document)
@@ -23,8 +23,8 @@ For devcontainers or codespaces, forward ports `8765` for faucet, `9650` for the
 
 When finished, stop everything with: `docker compose down`
 
-## 2. Explore MorpheusVM
-This repo includes [MorpheusVM](https://github.com/ava-labs/hypersdk/tree/main/examples/morpheusvm), the simplest HyperSDK VM. It supports one action (Transfer) for moving funds and tracking balances.
+## 2. Explore oraclevm
+This repo includes [oraclevm](https://github.com/ava-labs/hypersdk/tree/main/examples/oraclevm), the simplest HyperSDK VM. It supports one action (Transfer) for moving funds and tracking balances.
 
 ### 2.1 Connect wallet
 Open [http://localhost:5173](http://localhost:5173) to see the frontend.
@@ -35,7 +35,7 @@ We recommend using a Snap (requires [Metamask Flask](https://chromewebstore.goog
 
 ### 2.2 Execute a read-only action
 
-Actions can be executed on-chain (in a transaction) with results saved to a block, or off-chain (read-only). MorpheusVM has one action. Try executing it read-only. It shows expected balances of the sender and receiver. See the logic in `actions/transfer.go`.
+Actions can be executed on-chain (in a transaction) with results saved to a block, or off-chain (read-only). oraclevm has one action. Try executing it read-only. It shows expected balances of the sender and receiver. See the logic in `actions/transfer.go`.
 
 ![Read-only action](assets/read-only.png)
 
@@ -51,7 +51,7 @@ After mining, the transaction appears in the right column. This column shows all
 
 Logs are located inside the Docker container. To view them, you'll need to open a bash terminal inside the container and navigate to the folder with the current network:
 ```bash
-docker exec -it devnet bash -c "cd /root/.tmpnet/networks/latest_morpheusvm-e2e-tests && bash"
+docker exec -it devnet bash -c "cd /root/.tmpnet/networks/latest_oraclevm-e2e-tests && bash"
 ```
 
 This isn’t the best developer experience, and we’re working on improving it.
@@ -232,7 +232,7 @@ go install github.com/ava-labs/hypersdk/cmd/hypersdk-cli@fb8b6bf17264
 
 **Set the endpoint to your local instance of the HyperSDK app:**
 ```bash
-hypersdk-cli endpoint set --endpoint http://localhost:9650/ext/bc/morpheusvm/
+hypersdk-cli endpoint set --endpoint http://localhost:9650/ext/bc/oraclevm/
 ```
 
 **Import the faucet key**:

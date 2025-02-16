@@ -761,6 +761,25 @@ func GetFeedBribes(
 	return common.UnmarshalBribeInfoArray(value)
 }
 
+func GetFeedBribesFromState(
+	ctx context.Context,
+	f ReadState,
+	feedID uint64,
+	recipient codec.Address,
+	round uint64,
+) ([]*common.BribeInfo, error) {
+	k := FeedBribeKey(feedID, recipient, round)
+	values, errs := f(ctx, [][]byte{k})
+	value, exists, err := innerGetValue(values[0], errs[0])
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, nil
+	}
+	return common.UnmarshalBribeInfoArray(value)
+}
+
 func SetFeedBribes(
 	ctx context.Context,
 	mu state.Mutable,
@@ -849,17 +868,4 @@ func RemoveFeedBribe(
 		return nil, err
 	}
 	return bribe2remove, mu.Insert(ctx, k, bribeRaw)
-}
-
-func GetFeedBribeFromState(
-	ctx context.Context,
-	f ReadState,
-	feedID uint64,
-	recipient codec.Address,
-	round uint64,
-) (uint64, error) {
-	k := FeedBribeKey(feedID, recipient, round)
-	values, errs := f(ctx, [][]byte{k})
-	deposit, _, err := innerGetBalance(values[0], errs[0])
-	return deposit, err
 }
