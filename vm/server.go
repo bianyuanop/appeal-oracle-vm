@@ -133,8 +133,8 @@ func (j *JSONRPCServer) FeedResult(req *http.Request, args *FeedResultArgs, repl
 
 type BribeInfoArgs struct {
 	FeedID    uint64        `json:"feedID"`
-	Recipient codec.Address `json:"recipient"`
 	Round     uint64        `json:"round"`
+	Recipient codec.Address `json:"recipient"`
 }
 
 type BribeInfoReply struct {

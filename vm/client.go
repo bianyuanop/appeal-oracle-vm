@@ -15,6 +15,8 @@ import (
 	"github.com/ava-labs/hypersdk/genesis"
 	"github.com/ava-labs/hypersdk/requester"
 	"github.com/ava-labs/hypersdk/utils"
+	"github.com/bianyuanop/oraclevm/actions"
+	"github.com/bianyuanop/oraclevm/common"
 	"github.com/bianyuanop/oraclevm/consts"
 )
 
@@ -85,6 +87,48 @@ func (cli *JSONRPCClient) WaitForBalance(
 		}
 		return shouldExit, nil
 	})
+}
+
+func (cli *JSONRPCClient) FeedInfo(ctx context.Context, feedID uint64) (*actions.RegisterFeed, error) {
+	resp := new(FeedInfoReply)
+	err := cli.requester.SendRequest(
+		ctx,
+		"feedInfo",
+		&FeedInfoArgs{
+			FeedID: feedID,
+		},
+		resp,
+	)
+	return resp.Info, err
+}
+
+func (cli *JSONRPCClient) FeedResult(ctx context.Context, feedID uint64, round uint64) (*FeedResultReply, error) {
+	resp := new(FeedResultReply)
+	err := cli.requester.SendRequest(
+		ctx,
+		"feedResult",
+		&FeedResultArgs{
+			FeedID: feedID,
+			Round:  round,
+		},
+		resp,
+	)
+	return resp, err
+}
+
+func (cli *JSONRPCClient) BribeInfo(ctx context.Context, feedID uint64, round uint64, recipient codec.Address) ([]*common.BribeInfo, error) {
+	resp := new(BribeInfoReply)
+	err := cli.requester.SendRequest(
+		ctx,
+		"bribeInfo",
+		&BribeInfoArgs{
+			FeedID:    feedID,
+			Round:     round,
+			Recipient: recipient,
+		},
+		resp,
+	)
+	return resp.Bribes, err
 }
 
 func (cli *JSONRPCClient) Parser(ctx context.Context) (chain.Parser, error) {
