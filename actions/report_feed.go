@@ -263,6 +263,7 @@ func (rf *ReportFeed) Execute(
 		return nil, err
 	}
 
+	// TODO: remove this
 	if err := storage.SetFeedResult(ctx, mu, rf.FeedID, rf.Round, feedResultValue); err != nil {
 		return nil, err
 	}

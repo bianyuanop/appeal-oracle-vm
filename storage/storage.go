@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/ava-labs/avalanchego/database"
 
@@ -438,11 +439,33 @@ func SetReportAddresses(
 	addrs []codec.Address,
 ) error {
 	k := ReportIndexKey(feedID, round)
+	// sort & remove dups
+	slices.SortFunc(addrs, func(a, b codec.Address) int {
+		return strings.Compare(a.String(), b.String())
+	})
+	addrs = slices.CompactFunc(addrs, func(a, b codec.Address) bool {
+		return a.String() == b.String()
+	})
 	value, err := common.EncodeAddresses(addrs)
 	if err != nil {
 		return err
 	}
 	return mu.Insert(ctx, k, value)
+}
+
+func AddReportAddress(
+	ctx context.Context,
+	mu state.Mutable,
+	round uint64,
+	feedID uint64,
+	addr codec.Address,
+) error {
+	addrs, err := GetReportAddresses(ctx, mu, round, feedID)
+	if err != nil {
+		return err
+	}
+	addrs = append(addrs, addr)
+	return SetReportAddresses(ctx, mu, round, feedID, addrs)
 }
 
 func GetReportAddressesFromState(
