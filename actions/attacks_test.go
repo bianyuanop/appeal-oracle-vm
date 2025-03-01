@@ -85,7 +85,7 @@ func testAccounts(t *testing.T, mu state.Mutable) []codec.Address {
 	return ret
 }
 
-// Sybil Attacks controls over >50% of total voting power, hence it will success but with substantial cost
+// Sybil Attacks, i.e. Collusion Attack that controls over >50% of total voting power, hence it will success but with substantial cost
 func TestSybilAttack(t *testing.T) {
 	actorFinalize := codec.CreateAddress(0, ids.GenerateTestID())
 	finalizeReport := ReportFeed{
@@ -136,14 +136,105 @@ func TestSybilAttack(t *testing.T) {
 	}
 }
 
-func TestLastRoundBribeAttack(t *testing.T) {
+// Bribery attack is similar to collusion attack but the amount of voting power is attributed by providing
+// bribes, the total bribe to compromise the system is >50% deposit + half of the rewards given no appeal
+func TestCommonBriberyAttack(t *testing.T) {
+	actorFinalize := codec.CreateAddress(0, ids.GenerateTestID())
+	finalizeReport := ReportFeed{
+		FeedID: feedID,
+		Value:  correctValue,
+		Round:  initialRound,
+	}
 
+	roundStartTime := time.Now().UnixMilli()
+	roundEndTime := roundStartTime + finalizeInterval + 1
+
+	// setup state
+	state := chaintest.NewInMemoryStore()
+	setupFeed(t, state, roundStartTime)
+	accounts := testAccounts(t, state)
+	for i := 0; i < len(accounts); i++ {
+		deposit(t, state, accounts[i])
+	}
+	// finalize actor deposit
+	deposit(t, state, actorFinalize)
+	// report feeds
+	idx2split := int(float32(len(accounts))*0.5) - 1 // before this index, accounts are malicious, after are benign
+	for i := 0; i < idx2split; i++ {
+		report(t, state, accounts[i], wrongValue)
+	}
+	for j := idx2split; j < len(accounts); j++ {
+		report(t, state, accounts[j], correctValue)
+	}
+
+	tests := []chaintest.ActionTest{
+		{
+			Name:      "CollusionAttack",
+			Actor:     actorFinalize,
+			Timestamp: roundEndTime,
+			State:     state,
+			Action:    &finalizeReport,
+			ExpectedOutputs: &ReportFeedResult{
+				FeedID:           feedID,
+				Majority:         correctValue,
+				Round:            initialRound,
+				BribesFullfilled: nil,
+				Sealing:          true,
+			},
+		},
+	}
+	for _, tt := range tests {
+		tt.Run(context.Background(), t)
+	}
 }
 
-func TestColludeAttack(t *testing.T) {
+// Collusion with less <50% voting power
+func TestCollusionAttack(t *testing.T) {
+	actorFinalize := codec.CreateAddress(0, ids.GenerateTestID())
+	finalizeReport := ReportFeed{
+		FeedID: feedID,
+		Value:  correctValue,
+		Round:  initialRound,
+	}
 
-}
+	roundStartTime := time.Now().UnixMilli()
+	roundEndTime := roundStartTime + finalizeInterval + 1
 
-func TestAbuseAppeal(t *testing.T) {
+	// setup state
+	state := chaintest.NewInMemoryStore()
+	setupFeed(t, state, roundStartTime)
+	accounts := testAccounts(t, state)
+	for i := 0; i < len(accounts); i++ {
+		deposit(t, state, accounts[i])
+	}
+	// finalize actor deposit
+	deposit(t, state, actorFinalize)
+	// report feeds
+	idx2split := int(float32(len(accounts))*0.5) - 1 // before this index, accounts are malicious, after are benign
+	for i := 0; i < idx2split; i++ {
+		report(t, state, accounts[i], wrongValue)
+	}
+	for j := idx2split; j < len(accounts); j++ {
+		report(t, state, accounts[j], correctValue)
+	}
 
+	tests := []chaintest.ActionTest{
+		{
+			Name:      "CollusionAttack",
+			Actor:     actorFinalize,
+			Timestamp: roundEndTime,
+			State:     state,
+			Action:    &finalizeReport,
+			ExpectedOutputs: &ReportFeedResult{
+				FeedID:           feedID,
+				Majority:         correctValue,
+				Round:            initialRound,
+				BribesFullfilled: nil,
+				Sealing:          true,
+			},
+		},
+	}
+	for _, tt := range tests {
+		tt.Run(context.Background(), t)
+	}
 }
