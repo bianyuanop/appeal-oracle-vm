@@ -2,6 +2,8 @@ package actions
 
 import (
 	"context"
+	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -153,6 +155,13 @@ func TestReportIntoExists(t *testing.T) {
 				expectedRereportAddrs := []codec.Address{testActor1, testActor2, testActor3}
 				reportAddrs, err := storage.GetReportAddresses(ctx, m, r1.Round, r1.FeedID)
 				require.NoError(t, err)
+
+				slices.SortFunc(expectedRereportAddrs, func(a, b codec.Address) int {
+					return strings.Compare(a.String(), b.String())
+				})
+				slices.SortFunc(reportAddrs, func(a, b codec.Address) int {
+					return strings.Compare(a.String(), b.String())
+				})
 				require.Equal(t, len(expectedRereportAddrs), len(reportAddrs))
 				require.Equal(t, expectedRereportAddrs, reportAddrs)
 				// check r3 report is stored
@@ -302,6 +311,13 @@ func TestReportFeedWithManyReports(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, len(storageReportAddrs), len(addrsAtCur)+1)
 				addrsAtCur = append(addrsAtCur, testActor)
+
+				slices.SortFunc(storageReportAddrs, func(a, b codec.Address) int {
+					return strings.Compare(a.String(), b.String())
+				})
+				slices.SortFunc(addrsAtCur, func(a, b codec.Address) int {
+					return strings.Compare(a.String(), b.String())
+				})
 				require.Equal(t, storageReportAddrs, addrsAtCur)
 				// check this report is stored
 				storageReportValue, err := storage.GetReport(ctx, m, r1.FeedID, r1.Round, testActor)
